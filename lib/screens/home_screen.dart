@@ -40,6 +40,12 @@ class _HomeScreenState extends State<HomeScreen> {
     'Desayunar': Icons.bedroom_parent,
     'Fruta Diaria': Icons.apple,
     'Sin Frituras': Icons.kitchen,
+    'Beber 2L de agua': Icons.water_drop,
+  'No comida chatarra': Icons.fastfood,
+  'Cocinar en casa': Icons.restaurant,
+  'Comer sin celular': Icons.self_improvement,
+  'Dormir 8 horas': Icons.bed,
+  'No comer tarde': Icons.nightlight_round,
   };
   
   static const Map<String, int> _ptsReto = {
@@ -118,7 +124,7 @@ class _HomeScreenState extends State<HomeScreen> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text('ALIMENTATE', style: TextStyle(color: Colors.white, fontSize: 22, fontWeight: FontWeight.w900, letterSpacing: 0.5)),
+                    Text('ALIMENTATE+', style: TextStyle(color: Colors.white, fontSize: 22, fontWeight: FontWeight.w900, letterSpacing: 0.5)),
                     Text('Tu salud, tu hábito', style: TextStyle(color: Colors.white70, fontSize: 12)),
                   ],
                 ),
@@ -2130,66 +2136,337 @@ class _RingPainter extends CustomPainter {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 // ════════════════════════════════════════════════════════════
 //  Retos Section - Con Iconos
 // ════════════════════════════════════════════════════════════
-class _TabRetos extends StatelessWidget {
+class _TabRetos extends StatefulWidget {
   final AppState appState;
   final Map<String, IconData> iconos;
   final Map<String, int> pts;
-  const _TabRetos({required this.appState, required this.iconos, required this.pts});
+
+  const _TabRetos({
+    required this.appState,
+    required this.iconos,
+    required this.pts,
+  });
+
+  @override
+  State<_TabRetos> createState() => _TabRetosState();
+}
+
+class _TabRetosState extends State<_TabRetos> {
+  static const Color _verde = Color(0xFF7BC47F);
   
-  static const Color _verdeClaro = Color(0xFF7BC47F);
+  // Sistema de racha (streak)
+  int _racha = 0;
+  String _retoActivo = '';
   
+  // Retos adicionales
+  final List<String> _retosAdicionales = [
+    'Evitar comida chatarra',
+    'Cocinar en casa',
+    'Leer etiquetas nutricionales',
+    'Comer sin distracciones',
+    'Registrar lo que como',
+    'Probar una verdura nueva',
+    'Reducir porciones',
+    'Comer a horario fijo',
+  ];
+
+  @override
+  void initState() {
+    super.initState();
+    _calcularRacha();
+  }
+
+  void _calcularRacha() {
+    // Calcula cuántos retos completó hoy para determinar la racha
+    int completadosHoy = widget.appState.retos.values.where((v) => v == true).length;
+    if (completadosHoy >= 3) {
+      _racha = (_racha + 1).clamp(0, 7);
+    } else {
+      _racha = 0;
+    }
+  }
+
+  void _seleccionarRetoActivo() {
+    // Selecciona un reto aleatorio no completado como reto activo
+    final noCompletados = widget.appState.retos.entries
+        .where((e) => e.value == false)
+        .map((e) => e.key)
+        .toList();
+    
+    if (noCompletados.isNotEmpty) {
+      noCompletados.shuffle();
+      _retoActivo = noCompletados.first;
+    }
+  }
+
+  int _calcularPuntosBonus() {
+    // Puntos bonus por racha
+    return _racha * 5;
+  }
+
   @override
   Widget build(BuildContext context) {
-    final completados = appState.retos.values.where((v) => v).length;
-    final total = appState.retos.length;
+    final completados = widget.appState.retos.values.where((v) => v == true).length;
+    final total = widget.appState.retos.length;
     
+    if (_retoActivo.isEmpty) {
+      _seleccionarRetoActivo();
+    }
+
     return SingleChildScrollView(
       padding: const EdgeInsets.all(20),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
+          /// HEADER MEJORADO
           Row(
             children: [
-              const Expanded(
+              Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text('Retos de hoy', style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold)),
-                    SizedBox(height: 4),
-                    Text('Completa para ganar puntos', style: TextStyle(fontSize: 13, color: Color(0xFF4A5568))),
+                    const Text('Sistema de Retos',
+                        style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold)),
+                    const SizedBox(height: 4),
+                    Text('Completa metas diarias para mejorar tus habitos',
+                        style: TextStyle(fontSize: 13, color: Colors.grey[600])),
                   ],
                 ),
               ),
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
                 decoration: BoxDecoration(
-                  color: _verdeClaro.withOpacity(0.1),
+                  color: _verde.withOpacity(0.1),
                   borderRadius: BorderRadius.circular(30),
                 ),
                 child: Row(
                   children: [
-                    const Icon(Icons.emoji_events, size: 18, color: _verdeClaro),
+                    const Icon(Icons.local_fire_department, size: 18, color: _verde),
                     const SizedBox(width: 6),
-                    Text('$completados/$total', style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: _verdeClaro)),
+                    Text('$completados/$total',
+                        style: const TextStyle(
+                            fontSize: 18,
+                            fontWeight: FontWeight.bold,
+                            color: _verde)),
                   ],
                 ),
               ),
             ],
           ),
+
           const SizedBox(height: 20),
-          ClipRRect(
-            borderRadius: BorderRadius.circular(10),
-            child: LinearProgressIndicator(
-              value: completados / total,
-              backgroundColor: Colors.grey.shade200,
-              color: _verdeClaro,
-              minHeight: 8,
+
+          /// PROGRESO GENERAL CON ANIMACION
+          TweenAnimationBuilder<double>(
+            tween: Tween(begin: 0, end: total == 0 ? 0 : completados / total),
+            duration: const Duration(milliseconds: 600),
+            builder: (_, value, __) => ClipRRect(
+              borderRadius: BorderRadius.circular(10),
+              child: LinearProgressIndicator(
+                value: value,
+                minHeight: 8,
+                backgroundColor: Colors.grey.shade200,
+                color: _verde,
+              ),
             ),
           ),
-          const SizedBox(height: 24),
+
+          const SizedBox(height: 20),
+
+          /// SISTEMA DE RACHA (NUEVO)
+          Container(
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: _racha > 0 ? _verde.withOpacity(0.1) : Colors.grey.withOpacity(0.1),
+              borderRadius: BorderRadius.circular(15),
+              border: Border.all(
+                color: _racha > 0 ? _verde : Colors.grey,
+                width: 1,
+              ),
+            ),
+            child: Row(
+              children: [
+                Icon(
+                  _racha > 0 ? Icons.local_fire_department : Icons.bolt_outlined,
+                  color: _racha > 0 ? _verde : Colors.grey,
+                  size: 28,
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        _racha > 0 ? "Racha activa: $_racha dias" : "Sin racha activa",
+                        style: TextStyle(
+                          fontWeight: FontWeight.bold,
+                          color: _racha > 0 ? _verde : Colors.grey,
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        _racha > 0 
+                            ? "Completa 3 retos diarios para mantener tu racha"
+                            : "Completa 3 retos hoy para iniciar una racha",
+                        style: TextStyle(fontSize: 11, color: Colors.grey[600]),
+                      ),
+                    ],
+                  ),
+                ),
+                if (_racha > 0)
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                    decoration: BoxDecoration(
+                      color: _verde,
+                      borderRadius: BorderRadius.circular(20),
+                    ),
+                    child: Text(
+                      "+$_racha",
+                      style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+                    ),
+                  ),
+              ],
+            ),
+          ),
+
+          const SizedBox(height: 20),
+
+          /// RETO DESTACADO (NUEVO - MÁS DINÁMICO)
+          if (_retoActivo.isNotEmpty && !widget.appState.retos[_retoActivo]!)
+            Container(
+              margin: const EdgeInsets.only(bottom: 20),
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  colors: [_verde, _verde.withOpacity(0.7)],
+                ),
+                borderRadius: BorderRadius.circular(20),
+                boxShadow: [
+                  BoxShadow(
+                    color: _verde.withOpacity(0.3),
+                    blurRadius: 10,
+                    offset: const Offset(0, 4),
+                  ),
+                ],
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                        decoration: BoxDecoration(
+                          color: Colors.white24,
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: const Text(
+                          "RETO DESTACADO",
+                          style: TextStyle(
+                            color: Colors.white,
+                            fontSize: 10,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ),
+                      const Spacer(),
+                      Text(
+                        "+${(widget.pts[_retoActivo] ?? 20) + _calcularPuntosBonus()} pts",
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontWeight: FontWeight.bold,
+                          fontSize: 16,
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 12),
+                  Row(
+                    children: [
+                      Icon(
+                        widget.iconos[_retoActivo] ?? Icons.flag,
+                        color: Colors.white,
+                        size: 32,
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Text(
+                          _retoActivo,
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontWeight: FontWeight.bold,
+                            fontSize: 16,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 12),
+                  SizedBox(
+                    width: double.infinity,
+                    child: ElevatedButton(
+                      onPressed: () {
+                        HapticFeedback.mediumImpact();
+                        setState(() {
+                          widget.appState.toggleReto(_retoActivo);
+                          _calcularRacha();
+                          _mostrarMensaje(context, _retoActivo, true);
+                          _seleccionarRetoActivo();
+                        });
+                      },
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.white,
+                        foregroundColor: _verde,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                      ),
+                      child: const Text("COMPLETAR RETO"),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+
+          /// GRID DE RETOS MEJORADO
           GridView.builder(
             shrinkWrap: true,
             physics: const NeverScrollableScrollPhysics(),
@@ -2197,118 +2474,246 @@ class _TabRetos extends StatelessWidget {
               crossAxisCount: 2,
               crossAxisSpacing: 14,
               mainAxisSpacing: 14,
-              childAspectRatio: 0.95,
+              childAspectRatio: 0.9,
             ),
-            itemCount: appState.retos.length,
+            itemCount: widget.appState.retos.length,
             itemBuilder: (_, i) {
-              final key = appState.retos.keys.elementAt(i);
-              final val = appState.retos[key]!;
-              return _RetoCard(
+              final key = widget.appState.retos.keys.elementAt(i);
+              final completado = widget.appState.retos[key]!;
+              final esRetoActivo = key == _retoActivo && !completado;
+              final puntosBonus = esRetoActivo ? _calcularPuntosBonus() : 0;
+
+              return _RetoCardMejorado(
                 key: ValueKey(key),
-                icono: iconos[key] ?? Icons.flag,
+                icono: widget.iconos[key] ?? Icons.flag,
                 label: key,
-                puntos: pts[key] ?? 0,
-                completado: val,
+                puntosBase: widget.appState.puntos[key] ?? 20,
+                puntosBonus: puntosBonus,
+                completado: completado,
+                esDestacado: esRetoActivo,
                 onTap: () {
-                  HapticFeedback.lightImpact();
-                  appState.toggleReto(key);
+                  HapticFeedback.mediumImpact();
+                  if (!completado) {
+                    setState(() {
+                      widget.appState.toggleReto(key);
+                      _calcularRacha();
+                      _mostrarMensaje(context, key, false);
+                      if (key == _retoActivo) {
+                        _seleccionarRetoActivo();
+                      }
+                    });
+                  }
                 },
               );
             },
           ),
+
           const SizedBox(height: 24),
+
+          /// TIP DEL DIA SIN EMOJIS
           const _TipDelDia(),
         ],
       ),
     );
   }
+
+  void _mostrarMensaje(BuildContext context, String reto, bool esDestacado) {
+    final mensajesBase = [
+      "Mision completada. Sigue asi con tu progreso",
+      "Registro actualizado. Tu constancia esta dando resultados",
+      "Objetivo alcanzado. Cada reto completado te acerca a tu meta",
+      "Buen trabajo. Manten el ritmo en los siguientes retos",
+      "Logro registrado. La disciplina diaria construye habitos duraderos",
+    ];
+    
+    final mensajesRacha = [
+      "Racha de $_racha dias. Excelente consistencia",
+      "Has mantenido tu racha activa por $_racha dias",
+      "Tu disciplina suma $_racha dias consecutivos",
+    ];
+
+    mensajesBase.shuffle();
+    String mensaje = mensajesBase.first;
+    
+    if (_racha > 0 && _racha % 3 == 0) {
+      mensajesRacha.shuffle();
+      mensaje = mensajesRacha.first;
+    }
+    
+    if (esDestacado) {
+      mensaje = "Reto destacado completado. +${(widget.pts[reto] ?? 20) + _calcularPuntosBonus()} puntos";
+    }
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(mensaje),
+        backgroundColor: _verde,
+        behavior: SnackBarBehavior.floating,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        duration: const Duration(seconds: 2),
+      ),
+    );
+  }
 }
 
-class _RetoCard extends StatelessWidget {
+class _RetoCardMejorado extends StatelessWidget {
   final IconData icono;
   final String label;
-  final int puntos;
+  final int puntosBase;
+  final int puntosBonus;
   final bool completado;
+  final bool esDestacado;
   final VoidCallback onTap;
-  
-  const _RetoCard({
+
+  const _RetoCardMejorado({
     super.key,
-    required this.icono, 
-    required this.label, 
-    required this.puntos, 
-    required this.completado, 
-    required this.onTap
+    required this.icono,
+    required this.label,
+    required this.puntosBase,
+    required this.puntosBonus,
+    required this.completado,
+    required this.esDestacado,
+    required this.onTap,
   });
-  
+
   static const Color _verde = Color(0xFF7BC47F);
   
+  int get puntosTotales => puntosBase + puntosBonus;
+
   @override
   Widget build(BuildContext context) {
     return GestureDetector(
       onTap: onTap,
       child: AnimatedContainer(
-        duration: const Duration(milliseconds: 200),
+        duration: const Duration(milliseconds: 300),
         curve: Curves.easeOutCubic,
-        padding: const EdgeInsets.all(18),
+        padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
           gradient: completado
-              ? LinearGradient(
-                  colors: [_verde, _verde.withOpacity(0.85)],
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
-                )
+              ? LinearGradient(colors: [_verde, _verde.withOpacity(0.85)])
+              : (esDestacado && !completado)
+                  ? LinearGradient(
+                      colors: [_verde.withOpacity(0.15), _verde.withOpacity(0.05)],
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                    )
+                  : null,
+          color: completado ? null : (esDestacado ? null : Colors.white),
+          borderRadius: BorderRadius.circular(22),
+          border: esDestacado && !completado
+              ? Border.all(color: _verde, width: 2)
               : null,
-          color: completado ? null : Colors.white,
-          borderRadius: BorderRadius.circular(24),
           boxShadow: [
             BoxShadow(
-              color: completado ? _verde.withOpacity(0.3) : Colors.black.withOpacity(0.06),
-              blurRadius: completado ? 16 : 8,
+              color: completado
+                  ? _verde.withOpacity(0.3)
+                  : (esDestacado ? _verde.withOpacity(0.2) : Colors.black.withOpacity(0.05)),
+              blurRadius: 12,
               offset: const Offset(0, 4),
-            ),
+            )
           ],
-          border: completado ? null : Border.all(color: Colors.grey.shade100, width: 1.5),
         ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
+            /// ICONO Y ESTADO
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                Icon(icono, size: 36, color: completado ? Colors.white : _verde),
+                Icon(icono,
+                    size: 32,
+                    color: completado ? Colors.white : (esDestacado ? _verde : _verde)),
                 if (completado)
-                  const Icon(Icons.check_circle, color: Colors.white, size: 24),
+                  const Icon(Icons.check_circle, color: Colors.white)
+                else if (esDestacado)
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                    decoration: BoxDecoration(
+                      color: _verde,
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: const Text(
+                      "ACTIVO",
+                      style: TextStyle(color: Colors.white, fontSize: 8, fontWeight: FontWeight.bold),
+                    ),
+                  ),
               ],
             ),
             const Spacer(),
+
+            /// NOMBRE
             Text(
               label,
               style: TextStyle(
-                fontWeight: FontWeight.w700,
+                fontWeight: FontWeight.bold,
+                fontSize: 13,
                 color: completado ? Colors.white : Colors.black87,
-                fontSize: 14,
               ),
             ),
             const SizedBox(height: 8),
+
+            /// PROGRESO
+            ClipRRect(
+              borderRadius: BorderRadius.circular(8),
+              child: LinearProgressIndicator(
+                value: completado ? 1 : 0,
+                minHeight: 6,
+                backgroundColor: Colors.grey.shade200,
+                color: completado ? Colors.white : _verde,
+              ),
+            ),
+            const SizedBox(height: 6),
+
+            Text(
+              completado ? "Completado" : "Pendiente",
+              style: TextStyle(
+                fontSize: 11,
+                color: completado ? Colors.white70 : Colors.black54,
+              ),
+            ),
+            const SizedBox(height: 8),
+
+            /// PUNTOS CON BONUS
             Container(
-              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
               decoration: BoxDecoration(
-                color: completado ? Colors.white24 : _verde.withOpacity(0.15),
-                borderRadius: BorderRadius.circular(12),
+                color: completado
+                    ? Colors.white24
+                    : (esDestacado ? _verde.withOpacity(0.2) : _verde.withOpacity(0.15)),
+                borderRadius: BorderRadius.circular(10),
               ),
               child: Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
                   const Icon(Icons.star, size: 12, color: Colors.amber),
                   const SizedBox(width: 4),
-                  Text(
-                    '+$puntos pts',
-                    style: TextStyle(
-                      fontSize: 11,
-                      fontWeight: FontWeight.bold,
-                      color: completado ? Colors.white : _verde,
+                  if (puntosBonus > 0 && !completado) ...[
+                    Text(
+                      '+$puntosBase',
+                      style: const TextStyle(
+                        fontSize: 10,
+                        decoration: TextDecoration.lineThrough,
+                        color: Colors.grey,
+                      ),
                     ),
-                  ),
+                    const SizedBox(width: 4),
+                    Text(
+                      '+$puntosTotales',
+                      style: TextStyle(
+                        fontSize: 11,
+                        fontWeight: FontWeight.bold,
+                        color: completado ? Colors.white : Colors.orange,
+                      ),
+                    ),
+                  ] else
+                    Text(
+                      '+${completado ? puntosBase : puntosTotales} pts',
+                      style: TextStyle(
+                        fontSize: 11,
+                        fontWeight: FontWeight.bold,
+                        color: completado ? Colors.white : _verde,
+                      ),
+                    ),
                 ],
               ),
             ),
@@ -2319,88 +2724,41 @@ class _RetoCard extends StatelessWidget {
   }
 }
 
-// ════════════════════════════════════════════════════════════
-//  Tip del Día
-// ════════════════════════════════════════════════════════════
 class _TipDelDia extends StatelessWidget {
   const _TipDelDia();
-  
+
   static const List<String> _tips = [
-    '💧 Beber agua antes de cada comida ayuda a comer con más consciencia y reduce el apetito.',
-    '🍎 Una manzana al día aporta fibra y vitaminas esenciales para tu sistema inmune.',
-    '🌅 Desayunar activa tu metabolismo y mejora tu concentración durante toda la mañana.',
-    '🍬 Reducir el azúcar añadido mejora tu energía estable y previene picos de glucosa.',
-    '🍽️ Comer despacio permite registrar la saciedad a tiempo y evitar el sobrepeso.',
+    'Beber agua antes de comer reduce el apetito naturalmente',
+    'Una fruta diaria mejora significativamente tu digestion',
+    'Desayunar adecuadamente mejora tu energia durante el dia',
+    'Reducir el consumo de azucar proporciona energia mas estable',
+    'Comer despacio ayuda a evitar excesos y mejora la digestion',
+    'Las proteinas en el desayuno aumentan la saciedad matutina',
+    'Planificar las comidas semanalmente reduce decisiones impulsivas',
+    'Masticar cada bocado adecuadamente mejora la absorcion de nutrientes',
+    'El te verde acelera el metabolismo naturalmente',
+    'Dormir entre 7 y 8 horas regula las hormonas del hambre',
+    'Incluir fibra en cada comida mejora la salud digestiva',
+    'Cocinar al vapor conserva mejor los nutrientes de los alimentos',
+    'Reducir la sal ayuda a controlar la presion arterial',
+    'Los frutos secos son un excelente snack energetico y saludable',
   ];
-  
-  static const Color _verde = Color(0xFF4A9B6E);
-  static const Color _verdeClaro = Color(0xFF7BC47F);
-  
+
   @override
   Widget build(BuildContext context) {
     final tip = _tips[DateTime.now().day % _tips.length];
-    
+
     return Container(
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        gradient: LinearGradient(
-          colors: [_verde.withOpacity(0.05), _verdeClaro.withOpacity(0.08)],
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-        ),
-        borderRadius: BorderRadius.circular(24),
-        border: Border.all(color: _verde.withOpacity(0.15), width: 1.5),
+        color: Colors.green.withOpacity(0.05),
+        borderRadius: BorderRadius.circular(20),
       ),
       child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Container(
-            padding: const EdgeInsets.all(10),
-            decoration: BoxDecoration(
-              gradient: const LinearGradient(colors: [_verde, _verdeClaro]),
-              borderRadius: BorderRadius.circular(16),
-            ),
-            child: const Icon(Icons.lightbulb, color: Colors.white, size: 22),
-          ),
-          const SizedBox(width: 16),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  children: [
-                    Container(
-                      width: 4,
-                      height: 16,
-                      decoration: BoxDecoration(
-                        gradient: const LinearGradient(colors: [_verde, _verdeClaro]),
-                        borderRadius: BorderRadius.circular(2),
-                      ),
-                    ),
-                    const SizedBox(width: 8),
-                    const Text(
-                      'TIP DEL DÍA',
-                      style: TextStyle(
-                        fontSize: 11,
-                        fontWeight: FontWeight.w800,
-                        color: _verde,
-                        letterSpacing: 1.2,
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 10),
-                Text(
-                  tip,
-                  style: const TextStyle(
-                    fontSize: 14,
-                    color: Color(0xFF2D3748),
-                    height: 1.4,
-                  ),
-                ),
-              ],
-            ),
-          ),
+          const Icon(Icons.lightbulb, color: Colors.green),
+          const SizedBox(width: 10),
+          Expanded(child: Text(tip)),
         ],
       ),
     );
