@@ -65,7 +65,7 @@ class _HomeScreenState extends State<HomeScreen> {
                 index: _seccion,
                 children: [
                   _TabTest(appState: widget.appState),
-                  _TabRegistro(appState: widget.appState, iconos: _iconosComida),
+                  _TabRegistro(),
                   _TabRetos(appState: widget.appState, iconos: _iconosReto, pts: _ptsReto),
                 ],
               ),
@@ -967,6 +967,12 @@ class _TestInlineState extends State<_TestInline> {
 // ── Modelo de comida ─────────────────────────────────────────
 // ── Modelo de comida ─────────────────────────────────────────
 // ── Modelo de comida ─────────────────────────────────────────
+
+
+
+
+
+// ── Modelo de comida ─────────────────────────────────────────
 class Comida {
   final String nombre;
   final int calorias;
@@ -979,11 +985,43 @@ class Comida {
   });
 }
 
+// ── Modelo de sección de comida ──────────────────────────────
+class SeccionComida {
+  final String nombre;
+  final IconData icono;
+  final int metaCalorias;
+  final List<Comida> comidas;
+
+  SeccionComida({
+    required this.nombre,
+    required this.icono,
+    required this.metaCalorias,
+    List<Comida>? comidas,
+  }) : comidas = comidas ?? [];
+
+  int get totalCalorias => comidas.fold(0, (s, c) => s + c.calorias);
+
+  Color get colorEstado {
+    if (totalCalorias == 0) return const Color(0xFFBDBDBD);
+    final pct = totalCalorias / metaCalorias;
+    if (pct <= 1.0) return const Color(0xFF4CAF50);
+    if (pct <= 1.30) return const Color(0xFFE8943A);
+    return const Color(0xFFE53935);
+  }
+
+  String get etiquetaEstado {
+    if (totalCalorias == 0) return 'Sin registros';
+    final pct = totalCalorias / metaCalorias;
+    if (pct <= 0.7) return 'Pocas calorías';
+    if (pct <= 1.0) return 'Bien equilibrado';
+    if (pct <= 1.30) return 'Un poco alto';
+    return 'Muy alto';
+  }
+}
+
 // ── Tab de Registro de Comidas ───────────────────────────────
 class _TabRegistro extends StatefulWidget {
-  final AppState appState;
-  final Map<String, IconData> iconos;
-  const _TabRegistro({required this.appState, required this.iconos});
+  const _TabRegistro();
 
   @override
   State<_TabRegistro> createState() => _TabRegistroState();
@@ -992,408 +1030,595 @@ class _TabRegistro extends StatefulWidget {
 class _TabRegistroState extends State<_TabRegistro> {
   static const Color _naranja = Color(0xFFE8943A);
 
-  final List<Comida> _comidas = [];
   final TextEditingController _nombreCtrl = TextEditingController();
   final TextEditingController _calCtrl = TextEditingController();
   bool _cargandoCalorias = false;
 
-  static final List<Comida> _sugerencias = [
-    Comida(nombre: 'Desayuno', calorias: 350, icono: Icons.free_breakfast),
-    Comida(nombre: 'Almuerzo', calorias: 600, icono: Icons.lunch_dining),
-    Comida(nombre: 'Cena',     calorias: 500, icono: Icons.dinner_dining),
-    Comida(nombre: 'Snack',    calorias: 150, icono: Icons.cookie),
-    Comida(nombre: 'Fruta',    calorias: 80,  icono: Icons.apple),
-    Comida(nombre: 'Batido',   calorias: 250, icono: Icons.local_drink),
-  ];
+  late final List<SeccionComida> _secciones;
 
-  // ── Tabla local de respaldo (calorías por porción típica) ──
+  @override
+  void initState() {
+    super.initState();
+    _secciones = [
+      SeccionComida(nombre: 'Desayuno',     icono: Icons.free_breakfast,  metaCalorias: 400),
+      SeccionComida(nombre: 'Media mañana', icono: Icons.coffee,          metaCalorias: 200),
+      SeccionComida(nombre: 'Almuerzo',     icono: Icons.lunch_dining,    metaCalorias: 700),
+      SeccionComida(nombre: 'Media tarde',  icono: Icons.apple,           metaCalorias: 200),
+      SeccionComida(nombre: 'Cena',         icono: Icons.dinner_dining,   metaCalorias: 500),
+    ];
+  }
+
+  int get _totalDia =>
+      _secciones.fold(0, (s, sec) => s + sec.totalCalorias);
+
+  static const int _metaDia = 2000;
+
+  ({String mensaje, Color color, IconData icono}) get _estadoDia {
+    final total = _totalDia;
+    if (total == 0) {
+      return (
+        mensaje: 'Aún no has registrado nada hoy. ¡Empieza tu día!',
+        color: const Color(0xFF9E9E9E),
+        icono: Icons.wb_sunny_outlined,
+      );
+    }
+    final pct = total / _metaDia;
+    if (pct < 0.5) {
+      return (
+        mensaje: 'Estás comiendo muy poco hoy. Tu cuerpo necesita energía',
+        color: const Color(0xFF2196F3),
+        icono: Icons.sentiment_dissatisfied_outlined,
+      );
+    }
+    if (pct <= 0.85) {
+      return (
+        mensaje: '¡Vas muy bien! Estás en el camino correcto',
+        color: const Color(0xFF4CAF50),
+        icono: Icons.sentiment_satisfied_alt,
+      );
+    }
+    if (pct <= 1.0) {
+      return (
+        mensaje: 'Casi en tu meta diaria. ¡Excelente balance!',
+        color: const Color(0xFF4CAF50),
+        icono: Icons.sentiment_very_satisfied,
+      );
+    }
+    if (pct <= 1.2) {
+      return (
+        mensaje: 'Has superado tu meta. Considera porciones más ligeras',
+        color: _naranja,
+        icono: Icons.sentiment_neutral_outlined,
+      );
+    }
+    return (
+      mensaje: 'Hoy consumiste demasiadas calorías. Descansa y come ligero mañana',
+      color: const Color(0xFFE53935),
+      icono: Icons.sentiment_very_dissatisfied_outlined,
+    );
+  }
+
   static const Map<String, int> _tablaLocal = {
-    // Desayunos / panes
     'arepa': 160, 'arepa con huevo': 280, 'arepa con queso': 240,
     'pan': 80, 'pan integral': 70, 'tostada': 75, 'croissant': 230,
     'empanada': 250, 'pandebono': 180, 'buñuelo': 210,
     'tamal': 380, 'changua': 150, 'caldo': 120,
-    // Frutas
     'manzana': 80, 'banano': 90, 'banana': 90, 'platano': 90,
     'naranja': 60, 'mandarina': 45, 'uvas': 70, 'pera': 85,
     'mango': 100, 'piña': 50, 'papaya': 55, 'melón': 40,
     'sandía': 30, 'fresa': 35, 'fresas': 35, 'kiwi': 60,
-    // Proteínas
     'pollo': 165, 'pechuga': 165, 'pechuga de pollo': 165,
     'carne': 250, 'res': 250, 'carne de res': 250,
     'cerdo': 240, 'costilla': 290, 'chuleta': 220,
     'pescado': 150, 'tilapia': 120, 'salmon': 180, 'salmón': 180,
     'atun': 130, 'atún': 130, 'huevo': 78, 'huevos': 155,
     'chorizo': 290, 'salchicha': 180,
-    // Lácteos
     'leche': 150, 'yogurt': 100, 'yogur': 100, 'queso': 110,
     'kumis': 120, 'kéfir': 100,
-    // Carbohidratos / granos
     'arroz': 200, 'papa': 130, 'papas fritas': 320,
     'pasta': 220, 'espagueti': 220, 'fideos': 200,
     'lentejas': 230, 'frijoles': 220, 'fríjoles': 220,
     'garbanzos': 270, 'quinua': 220, 'avena': 150,
     'yuca': 160, 'plátano maduro': 120, 'patacón': 180,
-    // Verduras
     'ensalada': 50, 'lechuga': 15, 'tomate': 20, 'zanahoria': 40,
     'brócoli': 55, 'espinaca': 25, 'cebolla': 40, 'pepino': 15,
-    // Comidas completas
     'bandeja paisa': 1200, 'sancocho': 400, 'ajiaco': 380,
     'sopa': 200, 'hamburguesa': 550, 'pizza': 285,
     'burrito': 450, 'wrap': 350, 'sándwich': 300,
     'hot dog': 290, 'perro caliente': 290,
-    // Bebidas
     'jugo': 120, 'jugo de naranja': 110, 'café': 5,
     'café con leche': 80, 'tinto': 5, 'chocolate': 200,
     'gaseosa': 140, 'agua': 0,
-    // Snacks / dulces
-   'galletas': 140, 'chips': 160,
+    'galletas': 140, 'chips': 160,
     'maní': 170, 'almendras': 160, 'nueces': 185,
     'brownie': 240, 'torta': 350, 'helado': 200,
     'obleas': 150, 'chocoramo': 320,
   };
 
-  int get _totalCalorias => _comidas.fold(0, (sum, c) => sum + c.calorias);
-
-  // ── Busca en tabla local primero, luego en Open Food Facts ──
   Future<void> _estimarCalorias(String nombre) async {
     if (nombre.trim().isEmpty) return;
     setState(() {
       _cargandoCalorias = true;
       _calCtrl.clear();
     });
-
     final query = nombre.trim().toLowerCase();
-
     try {
-      // 1️⃣ Busca coincidencia exacta en tabla local
       if (_tablaLocal.containsKey(query)) {
-        final cals = _tablaLocal[query]!;
-        if (mounted) setState(() => _calCtrl.text = cals.toString());
+        if (mounted) setState(() => _calCtrl.text = _tablaLocal[query]!.toString());
         return;
       }
-
-      // 2️⃣ Busca coincidencia parcial en tabla local
       for (final entry in _tablaLocal.entries) {
         if (query.contains(entry.key) || entry.key.contains(query)) {
           if (mounted) setState(() => _calCtrl.text = entry.value.toString());
           return;
         }
       }
-
-      // 3️⃣ Open Food Facts API (gratuita, sin key)
       final uri = Uri.parse(
         'https://world.openfoodfacts.org/cgi/search.pl'
         '?search_terms=${Uri.encodeComponent(nombre.trim())}'
         '&search_simple=1&action=process&json=1&page_size=5'
         '&fields=product_name,nutriments',
       );
-
-      final response = await http.get(
-        uri,
-        headers: {'User-Agent': 'CaloriasApp/1.0'},
-      ).timeout(const Duration(seconds: 8));
-
+      final response = await http.get(uri, headers: {'User-Agent': 'CaloriasApp/1.0'})
+          .timeout(const Duration(seconds: 8));
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);
         final productos = data['products'] as List? ?? [];
-
         for (final prod in productos) {
           final nutriments = prod['nutriments'];
           if (nutriments == null) continue;
-
-          // Calorías por 100g → estimamos porción de ~150g
-          final kcalPor100g =
-              (nutriments['energy-kcal_100g'] ??
-               nutriments['energy-kcal'] ??
-               0)
-              .toDouble();
-
-          if (kcalPor100g > 0) {
-            final porcion = (kcalPor100g * 1.5).round(); // ~150g
+          final kcal = (nutriments['energy-kcal_100g'] ??
+              nutriments['energy-kcal'] ?? 0).toDouble();
+          if (kcal > 0) {
+            final porcion = (kcal * 1.5).round();
             if (mounted) setState(() => _calCtrl.text = porcion.toString());
             return;
           }
         }
       }
-
-      // 4️⃣ Si todo falla, avisa al usuario
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('No encontré "$nombre". Ingresa las calorías manualmente.'),
-            backgroundColor: Colors.orange.shade600,
-            behavior: SnackBarBehavior.floating,
-            duration: const Duration(seconds: 3),
-          ),
-        );
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+          content: Text('No encontré "$nombre". Ingresa las calorías manualmente.'),
+          backgroundColor: Colors.orange.shade600,
+          behavior: SnackBarBehavior.floating,
+          duration: const Duration(seconds: 3),
+        ));
       }
     } catch (e) {
-      debugPrint('Error estimando calorías: $e');
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Sin conexión. Ingresa las calorías manualmente.'),
-            backgroundColor: Colors.red,
-            behavior: SnackBarBehavior.floating,
-          ),
-        );
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+          content: Text('Sin conexión. Ingresa las calorías manualmente.'),
+          backgroundColor: Colors.red,
+          behavior: SnackBarBehavior.floating,
+        ));
       }
     } finally {
       if (mounted) setState(() => _cargandoCalorias = false);
     }
   }
 
-  void _agregarComida({String? nombre, int? calorias, IconData? icono}) {
+  void _agregarComidaASeccion(SeccionComida seccion, {String? nombre, int? calorias, IconData? icono}) {
     final n = nombre ?? _nombreCtrl.text.trim();
     final c = calorias ?? int.tryParse(_calCtrl.text.trim());
     if (n.isEmpty || c == null || c <= 0) return;
-
     setState(() {
-      _comidas.add(Comida(
-        nombre: n,
-        calorias: c,
-        icono: icono ?? Icons.restaurant,
-      ));
+      seccion.comidas.add(Comida(nombre: n, calorias: c, icono: icono ?? Icons.restaurant));
     });
     _nombreCtrl.clear();
     _calCtrl.clear();
   }
 
-  void _eliminarComida(int index) {
+  void _eliminarComida(SeccionComida seccion, int index) {
     HapticFeedback.lightImpact();
-    setState(() => _comidas.removeAt(index));
+    setState(() => seccion.comidas.removeAt(index));
   }
 
-  void _mostrarFormulario() {
+  // ── Ejemplos por sección para el banner informativo ──────────
+  static const Map<String, String> _ejemplosPorSeccion = {
+    'Desayuno': 'pan tostado, mantequilla, huevo revuelto, jugo de naranja',
+    'Media mañana': 'manzana, almendras, yogurt',
+    'Almuerzo': 'arroz, frijoles, pollo, ensalada, jugo',
+    'Media tarde': 'galletas, maní, agua',
+    'Cena': 'sopa, pan, queso, leche',
+  };
+
+  void _mostrarFormularioSeccion(SeccionComida seccion) {
     _nombreCtrl.clear();
     _calCtrl.clear();
+
+    final sugerenciasPorSeccion = {
+      'Desayuno': [
+        Comida(nombre: 'Arepa con huevo', calorias: 280, icono: Icons.egg_alt),
+        Comida(nombre: 'Avena', calorias: 150, icono: Icons.breakfast_dining),
+        Comida(nombre: 'Changua', calorias: 150, icono: Icons.soup_kitchen),
+        Comida(nombre: 'Tostada', calorias: 75, icono: Icons.bakery_dining),
+      ],
+      'Media mañana': [
+        Comida(nombre: 'Fruta', calorias: 80, icono: Icons.apple),
+        Comida(nombre: 'Almendras', calorias: 160, icono: Icons.spa),
+        Comida(nombre: 'Yogurt', calorias: 100, icono: Icons.local_drink),
+        Comida(nombre: 'Galletas', calorias: 140, icono: Icons.cookie),
+      ],
+      'Almuerzo': [
+        Comida(nombre: 'Bandeja paisa', calorias: 1200, icono: Icons.set_meal),
+        Comida(nombre: 'Sancocho', calorias: 400, icono: Icons.soup_kitchen),
+        Comida(nombre: 'Arroz con pollo', calorias: 450, icono: Icons.lunch_dining),
+        Comida(nombre: 'Ensalada', calorias: 50, icono: Icons.eco),
+      ],
+      'Media tarde': [
+        Comida(nombre: 'Snack', calorias: 150, icono: Icons.cookie),
+        Comida(nombre: 'Batido', calorias: 250, icono: Icons.local_drink),
+        Comida(nombre: 'Fruta', calorias: 80, icono: Icons.apple),
+        Comida(nombre: 'Maní', calorias: 170, icono: Icons.grain),
+      ],
+      'Cena': [
+        Comida(nombre: 'Sopa', calorias: 200, icono: Icons.soup_kitchen),
+        Comida(nombre: 'Sándwich', calorias: 300, icono: Icons.lunch_dining),
+        Comida(nombre: 'Ensalada', calorias: 50, icono: Icons.eco),
+        Comida(nombre: 'Ajiaco', calorias: 380, icono: Icons.dinner_dining),
+      ],
+    };
+
+    final sugerencias = sugerenciasPorSeccion[seccion.nombre] ?? [];
+    final ejemplo = _ejemplosPorSeccion[seccion.nombre] ?? 'arroz, pollo, ensalada';
 
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.white,
       shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+        borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
       ),
       builder: (ctx) => StatefulBuilder(
         builder: (ctx, setSheet) => Padding(
-          padding: EdgeInsets.fromLTRB(
-            20, 20, 20,
-            MediaQuery.of(ctx).viewInsets.bottom + 24,
-          ),
+          padding: EdgeInsets.fromLTRB(20, 16, 20, MediaQuery.of(ctx).viewInsets.bottom + 28),
           child: SingleChildScrollView(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              // handle
-              Center(
-                child: Container(
-                  width: 40, height: 4,
-                  decoration: BoxDecoration(
-                    color: Colors.grey.shade300,
-                    borderRadius: BorderRadius.circular(99),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+
+                // ── Handle ──────────────────────────────────
+                Center(
+                  child: Container(
+                    width: 36, height: 4,
+                    decoration: BoxDecoration(
+                      color: Colors.grey.shade200,
+                      borderRadius: BorderRadius.circular(99),
+                    ),
                   ),
                 ),
-              ),
-              const SizedBox(height: 16),
-              const Text('Agregar comida',
-                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.w700)),
-              const SizedBox(height: 16),
+                const SizedBox(height: 20),
 
-              // ── Sugerencias rápidas ──────────────────────
-              const Text('Acceso rápido',
-                  style: TextStyle(fontSize: 12, color: Colors.grey)),
-              const SizedBox(height: 8),
-              Wrap(
-                spacing: 8,
-                runSpacing: 8,
-                children: _sugerencias.map((s) => GestureDetector(
-                  onTap: () {
-                    Navigator.pop(ctx);
-                    _agregarComida(
-                        nombre: s.nombre,
-                        calorias: s.calorias,
-                        icono: s.icono);
-                  },
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(
-                        horizontal: 12, vertical: 8),
-                    decoration: BoxDecoration(
-                      color: _naranja.withOpacity(0.08),
-                      borderRadius: BorderRadius.circular(12),
-                      border: Border.all(color: _naranja.withOpacity(0.25)),
+                // ── Título ───────────────────────────────────
+                Row(
+                  children: [
+                    Container(
+                      width: 42, height: 42,
+                      decoration: BoxDecoration(
+                        color: _naranja.withOpacity(0.1),
+                        borderRadius: BorderRadius.circular(13),
+                      ),
+                      child: Icon(seccion.icono, color: _naranja, size: 20),
                     ),
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
+                    const SizedBox(width: 12),
+                    Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Icon(s.icono, size: 14, color: _naranja),
-                        const SizedBox(width: 6),
-                        Text('${s.nombre} · ${s.calorias} kcal',
-                            style: TextStyle(
-                                fontSize: 12,
-                                color: _naranja,
-                                fontWeight: FontWeight.w500)),
+                        Text(
+                          seccion.nombre,
+                          style: const TextStyle(
+                            fontSize: 18,
+                            fontWeight: FontWeight.w700,
+                            color: Color(0xFF1A1A1A),
+                          ),
+                        ),
+                        Text(
+                          '${seccion.comidas.length} alimento${seccion.comidas.length != 1 ? 's' : ''} registrado${seccion.comidas.length != 1 ? 's' : ''}',
+                          style: TextStyle(fontSize: 12, color: Colors.grey.shade400),
+                        ),
                       ],
                     ),
+                  ],
+                ),
+                const SizedBox(height: 20),
+
+                // ── Banner informativo ────────────────────────
+                Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.all(14),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFF0F7FF),
+                    borderRadius: BorderRadius.circular(14),
+                    border: Border.all(color: const Color(0xFFBBD6F5)),
                   ),
-                )).toList(),
-              ),
+                  child: Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Icon(Icons.info_outline_rounded,
+                          color: Color(0xFF1976D2), size: 18),
+                      const SizedBox(width: 10),
+                      Expanded(
+                        child: RichText(
+                          text: const TextSpan(
+                            style: TextStyle(
+                              fontSize: 13,
+                              color: Color(0xFF1565C0),
+                              height: 1.5,
+                            ),
+                            children: [
+                              TextSpan(
+                                text: 'Registra un alimento a la vez.\n',
+                                style: TextStyle(fontWeight: FontWeight.w700),
+                              ),
+                              TextSpan(
+                                text: 'Para mayor precisión, agrega cada ingrediente por separado. Por ejemplo, en lugar de "sándwich", registra ',
+                              ),
+                              TextSpan(
+                                text: 'pan, jamón y queso',
+                                style: TextStyle(fontWeight: FontWeight.w600),
+                              ),
+                              TextSpan(text: ' de forma individual.'),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 8),
 
-              const SizedBox(height: 20),
-              const Divider(),
-              const SizedBox(height: 12),
-              const Text('Personalizada',
-                  style: TextStyle(fontSize: 12, color: Colors.grey)),
-              const SizedBox(height: 10),
+                // ── Ejemplo de la sección ─────────────────────
+                Padding(
+                  padding: const EdgeInsets.only(left: 2),
+                  child: Text(
+                    'Ej. para esta comida: $ejemplo',
+                    style: TextStyle(
+                      fontSize: 11,
+                      color: Colors.grey.shade400,
+                      fontStyle: FontStyle.italic,
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 20),
 
+                // ── Acceso rápido ────────────────────────────
+                Row(
+                  children: [
+                    Container(
+                      width: 3, height: 14,
+                      decoration: BoxDecoration(
+                        color: _naranja,
+                        borderRadius: BorderRadius.circular(99),
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    const Text(
+                      'Acceso rápido',
+                      style: TextStyle(
+                        fontSize: 13,
+                        fontWeight: FontWeight.w600,
+                        color: Color(0xFF2D2D2D),
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 10),
+                Wrap(
+                  spacing: 8,
+                  runSpacing: 8,
+                  children: sugerencias.map((s) => GestureDetector(
+                    onTap: () {
+                      Navigator.pop(ctx);
+                      _agregarComidaASeccion(seccion, nombre: s.nombre, calorias: s.calorias, icono: s.icono);
+                    },
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 9),
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(color: Colors.grey.shade200),
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(s.icono, size: 14, color: _naranja),
+                          const SizedBox(width: 6),
+                          Text(
+                            s.nombre,
+                            style: const TextStyle(
+                              fontSize: 13,
+                              color: Color(0xFF2D2D2D),
+                              fontWeight: FontWeight.w500,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  )).toList(),
+                ),
+                const SizedBox(height: 24),
 
+                // ── Separador sección personalizada ───────────
+                Row(
+                  children: [
+                    Container(
+                      width: 3, height: 14,
+                      decoration: BoxDecoration(
+                        color: _naranja,
+                        borderRadius: BorderRadius.circular(99),
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    const Text(
+                      'Agregar personalizado',
+                      style: TextStyle(
+                        fontSize: 13,
+                        fontWeight: FontWeight.w600,
+                        color: Color(0xFF2D2D2D),
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 12),
 
+                // ── Campo nombre + buscar ────────────────────
+                Row(
+                  children: [
+                    Expanded(
+                      child: TextField(
+                        controller: _nombreCtrl,
+                        textInputAction: TextInputAction.done,
+                        onSubmitted: (val) async {
+                          await _estimarCalorias(val);
+                          setSheet(() {});
+                        },
+                        decoration: InputDecoration(
+                          hintText: 'Nombre del alimento',
+                          hintStyle: TextStyle(
+                            fontSize: 14,
+                            color: Colors.grey.shade400,
+                          ),
+                          prefixIcon: Icon(Icons.restaurant_outlined,
+                              color: Colors.grey.shade400, size: 20),
+                          filled: true,
+                          fillColor: Colors.grey.shade50,
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(14),
+                            borderSide: BorderSide.none,
+                          ),
+                          enabledBorder: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(14),
+                            borderSide: BorderSide(color: Colors.grey.shade100),
+                          ),
+                          focusedBorder: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(14),
+                            borderSide: BorderSide(
+                                color: _naranja.withOpacity(0.5), width: 1.5),
+                          ),
+                          contentPadding: const EdgeInsets.symmetric(
+                              horizontal: 14, vertical: 14),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    ElevatedButton(
+                      onPressed: _cargandoCalorias
+                          ? null
+                          : () async {
+                              await _estimarCalorias(_nombreCtrl.text);
+                              setSheet(() {});
+                            },
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: _naranja,
+                        foregroundColor: Colors.white,
+                        disabledBackgroundColor: _naranja.withOpacity(0.3),
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 16, vertical: 16),
+                        shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(14)),
+                        elevation: 0,
+                      ),
+                      child: _cargandoCalorias
+                          ? const SizedBox(
+                              width: 18,
+                              height: 18,
+                              child: CircularProgressIndicator(
+                                  strokeWidth: 2, color: Colors.white),
+                            )
+                          : const Icon(Icons.search_rounded, size: 20),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 10),
 
-              // ── Campo nombre + botón buscar ──────────────
-              Row(
-                crossAxisAlignment: CrossAxisAlignment.center,
-                children: [
-                  Expanded(
-                    child: TextField(
-                      controller: _nombreCtrl,
-                      textInputAction: TextInputAction.done,
-                      onSubmitted: (val) async {
-                        await _estimarCalorias(val);
-                        setSheet(() {});
-                      },
+                // ── Campo calorías ───────────────────────────
+                StatefulBuilder(
+                  builder: (_, setField) {
+                    _calCtrl.addListener(() => setField(() {}));
+                    return TextField(
+                      controller: _calCtrl,
+                      keyboardType: TextInputType.number,
                       decoration: InputDecoration(
-                        hintText: 'Nombre (ej. Arepa con huevo)',
-                        prefixIcon:
-                            const Icon(Icons.restaurant, color: _naranja),
+                        hintText: 'Calorías estimadas (kcal)',
+                        hintStyle: TextStyle(
+                          fontSize: 14,
+                          color: Colors.grey.shade400,
+                        ),
+                        prefixIcon: Icon(
+                          Icons.local_fire_department_outlined,
+                          color: _calCtrl.text.isNotEmpty
+                              ? Colors.green.shade400
+                              : Colors.grey.shade400,
+                          size: 20,
+                        ),
+                        suffixIcon: _calCtrl.text.isNotEmpty
+                            ? Icon(Icons.check_circle_rounded,
+                                color: Colors.green.shade400, size: 18)
+                            : null,
                         filled: true,
-                        fillColor: Colors.grey.shade50,
+                        fillColor: _calCtrl.text.isNotEmpty
+                            ? Colors.green.shade50
+                            : Colors.grey.shade50,
                         border: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(14),
                           borderSide: BorderSide.none,
                         ),
+                        enabledBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(14),
+                          borderSide: BorderSide(
+                            color: _calCtrl.text.isNotEmpty
+                                ? Colors.green.shade200
+                                : Colors.grey.shade100,
+                          ),
+                        ),
+                        focusedBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(14),
+                          borderSide: BorderSide(
+                              color: _naranja.withOpacity(0.5), width: 1.5),
+                        ),
+                        contentPadding: const EdgeInsets.symmetric(
+                            horizontal: 14, vertical: 14),
                       ),
-                    ),
-                  ),
-                  const SizedBox(width: 8),
-                  ElevatedButton(
-                    onPressed: _cargandoCalorias
-                        ? null
-                        : () async {
-                            await _estimarCalorias(_nombreCtrl.text);
-                            setSheet(() {});
-                          },
+                    );
+                  },
+                ),
+                const SizedBox(height: 20),
+
+                // ── Botón agregar ────────────────────────────
+                SizedBox(
+                  width: double.infinity,
+                  child: ElevatedButton(
+                    onPressed: () {
+                      _agregarComidaASeccion(seccion);
+                      Navigator.pop(ctx);
+                    },
                     style: ElevatedButton.styleFrom(
                       backgroundColor: _naranja,
                       foregroundColor: Colors.white,
-                      disabledBackgroundColor: _naranja.withOpacity(0.4),
-                      padding: const EdgeInsets.symmetric(
-                          horizontal: 14, vertical: 16),
+                      padding: const EdgeInsets.symmetric(vertical: 16),
                       shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(14)),
                       elevation: 0,
                     ),
-                    child: _cargandoCalorias
-                        ? const SizedBox(
-                            width: 18,
-                            height: 18,
-                            child: CircularProgressIndicator(
-                              strokeWidth: 2,
-                              color: Colors.white,
-                            ),
-                          )
-                        : const Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              Icon(Icons.search, size: 15),
-                              SizedBox(width: 4),
-                              Text('Buscar',
-                                  style: TextStyle(
-                                      fontSize: 13,
-                                      fontWeight: FontWeight.w700)),
-                            ],
+                    child: const Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Icon(Icons.add_circle_outline_rounded, size: 18),
+                        SizedBox(width: 8),
+                        Text(
+                          'Agregar alimento',
+                          style: TextStyle(
+                            fontWeight: FontWeight.w600,
+                            fontSize: 15,
                           ),
-                  ),
-                ],
-              ),
-
-
-
-
-
-              
-              const SizedBox(height: 6),
-              Padding(
-                padding: const EdgeInsets.only(left: 4),
-                child: Text(
-                  'Escribe el nombre y toca "Buscar" para estimar las calorías',
-                  style: TextStyle(fontSize: 11, color: Colors.grey.shade400),
-                ),
-              ),
-              const SizedBox(height: 10),
-
-              // ── Campo calorías ───────────────────────────
-              StatefulBuilder(
-                builder: (_, setField) {
-                  _calCtrl.addListener(() => setField(() {}));
-                  return TextField(
-                    controller: _calCtrl,
-                    keyboardType: TextInputType.number,
-                    decoration: InputDecoration(
-                      hintText: 'Calorías (kcal)',
-                      prefixIcon: const Icon(
-                          Icons.local_fire_department,
-                          color: _naranja),
-                      suffixIcon: _calCtrl.text.isNotEmpty
-                          ? const Icon(Icons.check_circle_rounded,
-                              color: Colors.green, size: 20)
-                          : null,
-                      filled: true,
-                      fillColor: _calCtrl.text.isNotEmpty
-                          ? Colors.green.shade50
-                          : Colors.grey.shade50,
-                      border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(14),
-                        borderSide: BorderSide.none,
-                      ),
-                      enabledBorder: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(14),
-                        borderSide: BorderSide(
-                          color: _calCtrl.text.isNotEmpty
-                              ? Colors.green.shade200
-                              : Colors.transparent,
                         ),
-                      ),
+                      ],
                     ),
-                  );
-                },
-              ),
-              const SizedBox(height: 16),
-
-              // ── Botón agregar ────────────────────────────
-              SizedBox(
-                width: double.infinity,
-                child: ElevatedButton(
-                  onPressed: () {
-                    _agregarComida();
-                    Navigator.pop(ctx);
-                  },
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: _naranja,
-                    foregroundColor: Colors.white,
-                    padding: const EdgeInsets.symmetric(vertical: 16),
-                    shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(14)),
-                    elevation: 0,
                   ),
-                  child: const Text('Agregar',
-                      style: TextStyle(
-                          fontWeight: FontWeight.w600, fontSize: 15)),
                 ),
-              ),
-            ],
-          ),
+              ],
+            ),
           ),
         ),
       ),
@@ -1409,195 +1634,326 @@ class _TabRegistroState extends State<_TabRegistro> {
 
   @override
   Widget build(BuildContext context) {
-    const int metaCalorias = 2000;
-    final double pct = (_totalCalorias / metaCalorias).clamp(0.0, 1.0);
-    final bool superada = _totalCalorias > metaCalorias;
+    final estado = _estadoDia;
 
     return Scaffold(
       backgroundColor: Colors.transparent,
-      floatingActionButton: FloatingActionButton.extended(
-        onPressed: _mostrarFormulario,
-        backgroundColor: _naranja,
-        foregroundColor: Colors.white,
-        elevation: 2,
-        icon: const Icon(Icons.add),
-        label: const Text('Agregar',
-            style: TextStyle(fontWeight: FontWeight.w600)),
-      ),
       body: SingleChildScrollView(
-        padding: const EdgeInsets.fromLTRB(20, 24, 20, 100),
+        padding: const EdgeInsets.fromLTRB(20, 24, 20, 40),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-
             // ── Header ──────────────────────────────────────
-            const Text('Registro de comidas',
-                style: TextStyle(fontSize: 22, fontWeight: FontWeight.w700)),
+            const Text(
+              'Registro de comidas',
+              style: TextStyle(fontSize: 22, fontWeight: FontWeight.w700),
+            ),
             const SizedBox(height: 4),
-            Text('Lleva el control de lo que comes hoy',
-                style: TextStyle(fontSize: 13, color: Colors.grey.shade500)),
-            const SizedBox(height: 24),
+            Text(
+              'Agrega cada alimento por separado para mayor precisión',
+              style: TextStyle(fontSize: 13, color: Colors.grey.shade500),
+            ),
+            const SizedBox(height: 20),
 
-            // ── Tarjeta calorías totales ─────────────────────
-            Container(
-              padding: const EdgeInsets.all(20),
+            // ── Tarjeta mensaje del día ──────────────────────
+            AnimatedContainer(
+              duration: const Duration(milliseconds: 400),
+              padding: const EdgeInsets.all(18),
               decoration: BoxDecoration(
-                gradient: LinearGradient(
-                  colors: superada
-                      ? [Colors.red.shade400, Colors.red.shade600]
-                      : [_naranja, const Color(0xFFD4782A)],
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
-                ),
-                borderRadius: BorderRadius.circular(22),
-                boxShadow: [
-                  BoxShadow(
-                    color: (superada ? Colors.red : _naranja).withOpacity(0.25),
-                    blurRadius: 16,
-                    offset: const Offset(0, 6),
-                  ),
-                ],
+                color: estado.color.withOpacity(0.07),
+                borderRadius: BorderRadius.circular(20),
+                border: Border.all(color: estado.color.withOpacity(0.2)),
               ),
               child: Row(
                 children: [
+                  Container(
+                    width: 50, height: 50,
+                    decoration: BoxDecoration(
+                      color: estado.color.withOpacity(0.12),
+                      borderRadius: BorderRadius.circular(15),
+                    ),
+                    child: Icon(estado.icono, color: estado.color, size: 26),
+                  ),
+                  const SizedBox(width: 14),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        // ── Solo barra de progreso del día (sin número) ──
+                        ClipRRect(
+                          borderRadius: BorderRadius.circular(99),
+                          child: LinearProgressIndicator(
+                            value: (_totalDia / _metaDia).clamp(0.0, 1.0),
+                            backgroundColor: Colors.grey.shade200,
+                            color: estado.color,
+                            minHeight: 5,
+                          ),
+                        ),
+                        const SizedBox(height: 8),
+                        Text(
+                          estado.mensaje,
+                          style: TextStyle(
+                            fontSize: 12,
+                            color: estado.color.withOpacity(0.85),
+                            height: 1.4,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 24),
+
+            // ── Secciones de comida ──────────────────────────
+            ..._secciones.map((sec) => _SeccionCard(
+                  seccion: sec,
+                  onAgregar: () => _mostrarFormularioSeccion(sec),
+                  onEliminar: (i) => _eliminarComida(sec, i),
+                )),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+// ── Tarjeta de sección expandible ────────────────────────────
+class _SeccionCard extends StatefulWidget {
+  final SeccionComida seccion;
+  final VoidCallback onAgregar;
+  final void Function(int) onEliminar;
+
+  const _SeccionCard({
+    required this.seccion,
+    required this.onAgregar,
+    required this.onEliminar,
+  });
+
+  @override
+  State<_SeccionCard> createState() => _SeccionCardState();
+}
+
+class _SeccionCardState extends State<_SeccionCard>
+    with SingleTickerProviderStateMixin {
+  bool _expandido = false;
+  late AnimationController _animCtrl;
+  late Animation<double> _rotacion;
+
+  @override
+  void initState() {
+    super.initState();
+    _animCtrl = AnimationController(
+        vsync: this, duration: const Duration(milliseconds: 250));
+    _rotacion = Tween<double>(begin: 0, end: 0.5).animate(
+        CurvedAnimation(parent: _animCtrl, curve: Curves.easeInOut));
+  }
+
+  @override
+  void dispose() {
+    _animCtrl.dispose();
+    super.dispose();
+  }
+
+  void _toggle() {
+    setState(() => _expandido = !_expandido);
+    _expandido ? _animCtrl.forward() : _animCtrl.reverse();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final sec = widget.seccion;
+    final color = sec.colorEstado;
+    final isEmpty = sec.comidas.isEmpty;
+    final progreso = (sec.totalCalorias / sec.metaCalorias).clamp(0.0, 1.0);
+
+    return Container(
+      margin: const EdgeInsets.only(bottom: 10),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(
+          color: _expandido ? color.withOpacity(0.3) : Colors.grey.shade100,
+          width: _expandido ? 1.5 : 1,
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.03),
+            blurRadius: 8,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: Column(
+        children: [
+          // ── Cabecera ──────────────────────────────────────
+          InkWell(
+            onTap: _toggle,
+            borderRadius: BorderRadius.circular(20),
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+              child: Row(
+                children: [
+                  // Icono
+                  AnimatedContainer(
+                    duration: const Duration(milliseconds: 300),
+                    width: 44,
+                    height: 44,
+                    decoration: BoxDecoration(
+                      color: color.withOpacity(0.1),
+                      borderRadius: BorderRadius.circular(13),
+                    ),
+                    child: Icon(sec.icono, size: 20, color: color),
+                  ),
+                  const SizedBox(width: 12),
+
+                  // Nombre + barra + etiqueta
                   Expanded(
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
-                          superada ? 'Meta superada' : 'Calorías consumidas',
-                          style: TextStyle(
-                              color: Colors.white.withOpacity(0.85),
-                              fontSize: 13),
+                          sec.nombre,
+                          style: const TextStyle(
+                            fontSize: 15,
+                            fontWeight: FontWeight.w600,
+                            color: Color(0xFF1A1A1A),
+                          ),
                         ),
                         const SizedBox(height: 6),
+                        // ── Barra de progreso sin número ──────
+                        ClipRRect(
+                          borderRadius: BorderRadius.circular(99),
+                          child: LinearProgressIndicator(
+                            value: progreso,
+                            backgroundColor: Colors.grey.shade100,
+                            color: color,
+                            minHeight: 5,
+                          ),
+                        ),
+                        const SizedBox(height: 5),
                         Row(
-                          crossAxisAlignment: CrossAxisAlignment.end,
                           children: [
-                            Text(
-                              '$_totalCalorias',
-                              style: const TextStyle(
-                                color: Colors.white,
-                                fontSize: 42,
-                                fontWeight: FontWeight.w800,
-                                height: 1,
+                            Container(
+                              padding: const EdgeInsets.symmetric(
+                                  horizontal: 7, vertical: 2),
+                              decoration: BoxDecoration(
+                                color: color.withOpacity(0.1),
+                                borderRadius: BorderRadius.circular(20),
+                              ),
+                              child: Text(
+                                isEmpty ? 'Sin registros' : sec.etiquetaEstado,
+                                style: TextStyle(
+                                  fontSize: 10,
+                                  fontWeight: FontWeight.w600,
+                                  color: color,
+                                ),
                               ),
                             ),
-                            const SizedBox(width: 4),
-                            Padding(
-                              padding: const EdgeInsets.only(bottom: 6),
-                              child: Text('kcal',
-                                  style: TextStyle(
-                                      color: Colors.white.withOpacity(0.75),
-                                      fontSize: 16,
-                                      fontWeight: FontWeight.w500)),
-                            ),
+                            if (!isEmpty) ...[
+                              const SizedBox(width: 6),
+                              Text(
+                                '${sec.comidas.length} item${sec.comidas.length > 1 ? 's' : ''}',
+                                style: TextStyle(
+                                    fontSize: 10, color: Colors.grey.shade400),
+                              ),
+                            ],
                           ],
                         ),
-                        const SizedBox(height: 4),
-                        Text('Meta: $metaCalorias kcal',
-                            style: TextStyle(
-                                color: Colors.white.withOpacity(0.7),
-                                fontSize: 12)),
                       ],
                     ),
                   ),
-                  SizedBox(
-                    width: 72,
-                    height: 72,
-                    child: Stack(
-                      alignment: Alignment.center,
-                      children: [
-                        CustomPaint(
-                          size: const Size(72, 72),
-                          painter: _RingPainter(
-                            progress: pct,
-                            color: Colors.white,
-                            strokeWidth: 7,
-                          ),
-                        ),
-                        Text(
-                          '${(pct * 100).round()}%',
-                          style: const TextStyle(
-                            color: Colors.white,
-                            fontSize: 13,
-                            fontWeight: FontWeight.w700,
-                          ),
-                        ),
-                      ],
-                    ),
+                  const SizedBox(width: 10),
+
+                  // Flecha
+                  RotationTransition(
+                    turns: _rotacion,
+                    child: Icon(Icons.keyboard_arrow_down_rounded,
+                        color: Colors.grey.shade300, size: 22),
                   ),
                 ],
               ),
             ),
-            const SizedBox(height: 16),
+          ),
 
-            // ── Barra de progreso ────────────────────────────
-            Row(
+          // ── Contenido expandible ───────────────────────────
+          AnimatedCrossFade(
+            firstChild: const SizedBox(width: double.infinity),
+            secondChild: Column(
               children: [
-                Text(
-                  '${_comidas.length} comida${_comidas.length == 1 ? '' : 's'} registrada${_comidas.length == 1 ? '' : 's'}',
-                  style: TextStyle(
-                      fontSize: 12,
-                      color: Colors.grey.shade400,
-                      fontWeight: FontWeight.w500),
-                ),
-                const Spacer(),
-                Text(
-                  'Restan ${(metaCalorias - _totalCalorias).abs()} kcal'
-                  '${superada ? ' de más' : ''}',
-                  style: TextStyle(
-                    fontSize: 12,
-                    color: superada ? Colors.red.shade400 : _naranja,
-                    fontWeight: FontWeight.w600,
+                // Separador fino
+                Divider(height: 1, color: Colors.grey.shade100),
+                const SizedBox(height: 12),
+
+                // Lista de comidas
+                if (sec.comidas.isNotEmpty)
+                  ...List.generate(sec.comidas.length, (i) {
+                    final c = sec.comidas[i];
+                    return _ComidaItem(
+                      comida: c,
+                      isLast: i == sec.comidas.length - 1,
+                      onEliminar: () => widget.onEliminar(i),
+                      colorAccent: color,
+                    );
+                  })
+                else
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(16, 4, 16, 8),
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(vertical: 22),
+                      width: double.infinity,
+                      decoration: BoxDecoration(
+                        color: Colors.grey.shade50,
+                        borderRadius: BorderRadius.circular(14),
+                      ),
+                      child: Column(
+                        children: [
+                          Icon(sec.icono, size: 26, color: Colors.grey.shade200),
+                          const SizedBox(height: 8),
+                          Text(
+                            'Sin alimentos registrados',
+                            style: TextStyle(
+                                color: Colors.grey.shade300, fontSize: 13),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                const SizedBox(height: 8),
+
+                // Botón agregar
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+                  child: SizedBox(
+                    width: double.infinity,
+                    child: OutlinedButton.icon(
+                      onPressed: widget.onAgregar,
+                      icon: const Icon(Icons.add_rounded, size: 18),
+                      label: const Text('Agregar alimento'),
+                      style: OutlinedButton.styleFrom(
+                        foregroundColor: color,
+                        side: BorderSide(color: color.withOpacity(0.3)),
+                        backgroundColor: color.withOpacity(0.04),
+                        padding: const EdgeInsets.symmetric(vertical: 12),
+                        shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12)),
+                        textStyle: const TextStyle(
+                          fontSize: 14,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ),
                   ),
                 ),
               ],
             ),
-            const SizedBox(height: 8),
-            ClipRRect(
-              borderRadius: BorderRadius.circular(99),
-              child: LinearProgressIndicator(
-                value: pct,
-                backgroundColor: Colors.grey.shade100,
-                color: superada ? Colors.red.shade400 : _naranja,
-                minHeight: 5,
-              ),
-            ),
-            const SizedBox(height: 24),
-
-            // ── Lista de comidas ─────────────────────────────
-            if (_comidas.isEmpty)
-              Center(
-                child: Padding(
-                  padding: const EdgeInsets.symmetric(vertical: 40),
-                  child: Column(
-                    children: [
-                      Icon(Icons.restaurant_menu,
-                          size: 52, color: Colors.grey.shade200),
-                      const SizedBox(height: 12),
-                      Text('Aún no has registrado comidas',
-                          style: TextStyle(
-                              color: Colors.grey.shade400, fontSize: 14)),
-                      const SizedBox(height: 4),
-                      Text('Toca "Agregar" para empezar',
-                          style: TextStyle(
-                              color: Colors.grey.shade300, fontSize: 12)),
-                    ],
-                  ),
-                ),
-              )
-            else
-              ...List.generate(_comidas.length, (i) {
-                final c = _comidas[i];
-                return _ComidaItem(
-                  comida: c,
-                  isLast: i == _comidas.length - 1,
-                  onEliminar: () => _eliminarComida(i),
-                );
-              }),
-          ],
-        ),
+            crossFadeState: _expandido
+                ? CrossFadeState.showSecond
+                : CrossFadeState.showFirst,
+            duration: const Duration(milliseconds: 250),
+          ),
+        ],
       ),
     );
   }
@@ -1608,13 +1964,13 @@ class _ComidaItem extends StatelessWidget {
   final Comida comida;
   final bool isLast;
   final VoidCallback onEliminar;
-
-  static const Color _naranja = Color(0xFFE8943A);
+  final Color colorAccent;
 
   const _ComidaItem({
     required this.comida,
     required this.isLast,
     required this.onEliminar,
+    required this.colorAccent,
   });
 
   @override
@@ -1625,80 +1981,58 @@ class _ComidaItem extends StatelessWidget {
       background: Container(
         alignment: Alignment.centerRight,
         padding: const EdgeInsets.only(right: 20),
-        margin: EdgeInsets.only(bottom: isLast ? 0 : 10),
+        margin: EdgeInsets.fromLTRB(16, 0, 16, isLast ? 0 : 8),
         decoration: BoxDecoration(
           color: Colors.red.shade50,
-          borderRadius: BorderRadius.circular(18),
+          borderRadius: BorderRadius.circular(12),
         ),
-        child: Icon(Icons.delete_outline_rounded, color: Colors.red.shade400),
+        child: Icon(Icons.delete_outline_rounded, color: Colors.red.shade300),
       ),
       onDismissed: (_) => onEliminar(),
       child: Container(
-        margin: EdgeInsets.only(bottom: isLast ? 0 : 10),
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+        margin: EdgeInsets.fromLTRB(16, 0, 16, isLast ? 0 : 8),
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 11),
         decoration: BoxDecoration(
           color: Colors.white,
-          borderRadius: BorderRadius.circular(18),
+          borderRadius: BorderRadius.circular(12),
           border: Border.all(color: Colors.grey.shade100),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withOpacity(0.04),
-              blurRadius: 8,
-              offset: const Offset(0, 2),
-            ),
-          ],
         ),
         child: Row(
           children: [
             Container(
-              width: 48,
-              height: 48,
+              width: 34,
+              height: 34,
               decoration: BoxDecoration(
-                color: _naranja.withOpacity(0.08),
-                borderRadius: BorderRadius.circular(14),
-                border: Border.all(color: _naranja.withOpacity(0.2)),
-              ),
-              child: Icon(comida.icono, size: 22, color: _naranja),
-            ),
-            const SizedBox(width: 14),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(comida.nombre,
-                      style: const TextStyle(
-                          fontSize: 15,
-                          fontWeight: FontWeight.w600,
-                          color: Color(0xFF2D2D2D))),
-                  const SizedBox(height: 2),
-                  Text('Desliza para eliminar',
-                      style: TextStyle(
-                          fontSize: 11, color: Colors.grey.shade400)),
-                ],
-              ),
-            ),
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-              decoration: BoxDecoration(
-                color: _naranja.withOpacity(0.08),
+                color: colorAccent.withOpacity(0.1),
                 borderRadius: BorderRadius.circular(10),
               ),
-              child: Row(
-                children: [
-                  Icon(Icons.local_fire_department, size: 14, color: _naranja),
-                  const SizedBox(width: 4),
-                  Text(
-                    '${comida.calorias} kcal',
-                    style: TextStyle(
-                      fontSize: 13,
-                      fontWeight: FontWeight.w700,
-                      color: _naranja,
-                    ),
-                  ),
-                ],
+              child: Icon(comida.icono, size: 17, color: colorAccent),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Text(
+                comida.nombre,
+                style: const TextStyle(
+                  fontSize: 14,
+                  fontWeight: FontWeight.w500,
+                  color: Color(0xFF2D2D2D),
+                ),
               ),
             ),
-            const SizedBox(width: 8),
+            // ── Solo barra de porción, sin número ──────────
+            SizedBox(
+              width: 60,
+              child: ClipRRect(
+                borderRadius: BorderRadius.circular(99),
+                child: LinearProgressIndicator(
+                  value: (comida.calorias / 600).clamp(0.0, 1.0),
+                  backgroundColor: Colors.grey.shade100,
+                  color: colorAccent.withOpacity(0.6),
+                  minHeight: 4,
+                ),
+              ),
+            ),
+            const SizedBox(width: 10),
             GestureDetector(
               onTap: () {
                 HapticFeedback.lightImpact();
@@ -1707,13 +2041,14 @@ class _ComidaItem extends StatelessWidget {
                   builder: (_) => AlertDialog(
                     shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(20)),
-                    title: const Text('Eliminar comida',
-                        style: TextStyle(
-                            fontSize: 17, fontWeight: FontWeight.w700)),
+                    title: const Text(
+                      'Eliminar alimento',
+                      style: TextStyle(fontSize: 17, fontWeight: FontWeight.w700),
+                    ),
                     content: Text(
-                        '¿Quieres eliminar "${comida.nombre}" del registro?',
-                        style: TextStyle(
-                            fontSize: 14, color: Colors.grey.shade600)),
+                      '¿Quieres eliminar "${comida.nombre}"?',
+                      style: TextStyle(fontSize: 14, color: Colors.grey.shade600),
+                    ),
                     actions: [
                       TextButton(
                         onPressed: () => Navigator.pop(context),
@@ -1727,22 +2062,22 @@ class _ComidaItem extends StatelessWidget {
                         },
                         child: const Text('Eliminar',
                             style: TextStyle(
-                                color: Colors.red,
-                                fontWeight: FontWeight.w600)),
+                                color: Colors.red, fontWeight: FontWeight.w600)),
                       ),
                     ],
                   ),
                 );
               },
               child: Container(
-                width: 32,
-                height: 32,
+                width: 30,
+                height: 30,
                 decoration: BoxDecoration(
-                  color: Colors.red.shade50,
-                  borderRadius: BorderRadius.circular(10),
+                  color: Colors.grey.shade50,
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(color: Colors.grey.shade100),
                 ),
                 child: Icon(Icons.delete_outline_rounded,
-                    size: 17, color: Colors.red.shade400),
+                    size: 15, color: Colors.grey.shade400),
               ),
             ),
           ],
@@ -1752,6 +2087,7 @@ class _ComidaItem extends StatelessWidget {
   }
 }
 
+// ── RingPainter ───────────────────────────────────────────────
 class _RingPainter extends CustomPainter {
   final double progress;
   final Color color;
@@ -1769,39 +2105,26 @@ class _RingPainter extends CustomPainter {
     final cy = size.height / 2;
     final radius = size.width / 2 - strokeWidth;
     final rect = Rect.fromCircle(center: Offset(cx, cy), radius: radius);
-
-    canvas.drawArc(
-      rect, -1.5708, 6.2832, false,
-      Paint()
-        ..color = color.withOpacity(0.25)
-        ..style = PaintingStyle.stroke
-        ..strokeWidth = strokeWidth
-        ..strokeCap = StrokeCap.round,
-    );
-
-    if (progress > 0) {
-      canvas.drawArc(
-        rect, -1.5708, 6.2832 * progress, false,
+    canvas.drawArc(rect, -1.5708, 6.2832, false,
         Paint()
-          ..color = color
+          ..color = color.withOpacity(0.15)
           ..style = PaintingStyle.stroke
           ..strokeWidth = strokeWidth
-          ..strokeCap = StrokeCap.round,
-      );
+          ..strokeCap = StrokeCap.round);
+    if (progress > 0) {
+      canvas.drawArc(rect, -1.5708, 6.2832 * progress, false,
+          Paint()
+            ..color = color
+            ..style = PaintingStyle.stroke
+            ..strokeWidth = strokeWidth
+            ..strokeCap = StrokeCap.round);
     }
   }
 
   @override
-  bool shouldRepaint(_RingPainter old) {
-    return old.progress != progress || old.color != color;
-  }
+  bool shouldRepaint(_RingPainter old) =>
+      old.progress != progress || old.color != color;
 }
-
-
-
-
-
-
 
 
 
