@@ -4,29 +4,28 @@ import '../state/app_state.dart';
 import 'test_habitos_screen.dart';
 import 'dart:convert';
 import 'package:http/http.dart' as http;
-
+ 
 // ════════════════════════════════════════════════════════════
 //  HomeScreen - Versión con Iconos en lugar de Emojis
 // ════════════════════════════════════════════════════════════
 class HomeScreen extends StatefulWidget {
   final AppState appState;
   const HomeScreen({super.key, required this.appState});
-
+ 
   @override
   State<HomeScreen> createState() => _HomeScreenState();
 }
-
+ 
 class _HomeScreenState extends State<HomeScreen> {
   int _seccion = 0;
-  
-  // Paleta de colores más suave y profesional
+ 
   static const Color _verdeSuave = Color(0xFF4A9B6E);
   static const Color _verdeClaro = Color(0xFF7BC47F);
   static const Color _naranja = Color(0xFFFFB347);
   static const Color _crema = Color(0xFFFDF8F0);
   static const Color _grisTexto = Color(0xFF4A5568);
   static const Color _grisClaro = Color(0xFFE2E8F0);
-  
+ 
   static const Map<String, IconData> _iconosComida = {
     'Desayuno': Icons.free_breakfast,
     'Almuerzo': Icons.lunch_dining,
@@ -34,28 +33,31 @@ class _HomeScreenState extends State<HomeScreen> {
     'Fruta': Icons.apple,
     'Agua': Icons.water_drop,
   };
-  
+ 
   static const Map<String, IconData> _iconosReto = {
     'Sin Gaseosa': Icons.local_drink,
     'Desayunar': Icons.bedroom_parent,
     'Fruta Diaria': Icons.apple,
     'Sin Frituras': Icons.kitchen,
     'Beber 2L de agua': Icons.water_drop,
-  'No comida chatarra': Icons.fastfood,
-  'Cocinar en casa': Icons.restaurant,
-  'Comer sin celular': Icons.self_improvement,
-  'Dormir 8 horas': Icons.bed,
-  'No comer tarde': Icons.nightlight_round,
+    'No comida chatarra': Icons.fastfood,
+    'Cocinar en casa': Icons.restaurant,
+    'Comer sin celular': Icons.self_improvement,
+    'Dormir 8 horas': Icons.bed,
+    'No comer tarde': Icons.nightlight_round,
   };
-  
+ 
   static const Map<String, int> _ptsReto = {
-    'Sin Gaseosa': 30, 'Desayunar': 40, 'Fruta Diaria': 20, 'Sin Frituras': 20,
+    'Sin Gaseosa': 30,
+    'Desayunar': 40,
+    'Fruta Diaria': 20,
+    'Sin Frituras': 20,
   };
-  
+ 
   int get _puntos => widget.appState.retos.entries
       .where((e) => e.value)
       .fold(0, (s, e) => s + (_ptsReto[e.key] ?? 0));
-
+ 
   @override
   Widget build(BuildContext context) {
     return ListenableBuilder(
@@ -71,8 +73,12 @@ class _HomeScreenState extends State<HomeScreen> {
                 index: _seccion,
                 children: [
                   _TabTest(appState: widget.appState),
-                  _TabRegistro(),
-                  _TabRetos(appState: widget.appState, iconos: _iconosReto, pts: _ptsReto),
+                  // ✅ CORRECCIÓN 3: se pasa appState a _TabRegistro
+                  _TabRegistro(appState: widget.appState),
+                  _TabRetos(
+                      appState: widget.appState,
+                      iconos: _iconosReto,
+                      pts: _ptsReto),
                 ],
               ),
             ),
@@ -81,7 +87,7 @@ class _HomeScreenState extends State<HomeScreen> {
       ),
     );
   }
-  
+ 
   Widget _buildHeader() {
     return Container(
       decoration: BoxDecoration(
@@ -105,7 +111,8 @@ class _HomeScreenState extends State<HomeScreen> {
           child: Row(
             children: [
               Container(
-                width: 48, height: 48,
+                width: 48,
+                height: 48,
                 decoration: BoxDecoration(
                   color: Colors.white.withOpacity(0.2),
                   borderRadius: BorderRadius.circular(14),
@@ -117,15 +124,22 @@ class _HomeScreenState extends State<HomeScreen> {
                     ),
                   ],
                 ),
-                child: const Center(child: Icon(Icons.eco, color: Colors.white, size: 26)),
+                child:
+                    const Center(child: Icon(Icons.eco, color: Colors.white, size: 26)),
               ),
               const SizedBox(width: 14),
               const Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text('ALIMENTATE+', style: TextStyle(color: Colors.white, fontSize: 22, fontWeight: FontWeight.w900, letterSpacing: 0.5)),
-                    Text('Tu salud, tu hábito', style: TextStyle(color: Colors.white70, fontSize: 12)),
+                    Text('ALIMENTATE+',
+                        style: TextStyle(
+                            color: Colors.white,
+                            fontSize: 22,
+                            fontWeight: FontWeight.w900,
+                            letterSpacing: 0.5)),
+                    Text('Tu salud, tu hábito',
+                        style: TextStyle(color: Colors.white70, fontSize: 12)),
                   ],
                 ),
               ),
@@ -144,7 +158,11 @@ class _HomeScreenState extends State<HomeScreen> {
                       children: [
                         const Icon(Icons.emoji_events, color: Colors.amber, size: 18),
                         const SizedBox(width: 5),
-                        Text('$value pts', style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w800, fontSize: 14)),
+                        Text('$value pts',
+                            style: const TextStyle(
+                                color: Colors.white,
+                                fontWeight: FontWeight.w800,
+                                fontSize: 14)),
                       ],
                     ),
                   );
@@ -156,7 +174,7 @@ class _HomeScreenState extends State<HomeScreen> {
       ),
     );
   }
-  
+ 
   Widget _buildSegmentedControl() {
     return Container(
       margin: const EdgeInsets.fromLTRB(20, 20, 20, 24),
@@ -171,10 +189,10 @@ class _HomeScreenState extends State<HomeScreen> {
       ),
     );
   }
-  
+ 
   Widget _buildTabButton(int index, IconData icon, String label, Color color) {
     final isActive = _seccion == index;
-    
+ 
     return GestureDetector(
       onTap: () {
         HapticFeedback.selectionClick();
@@ -185,7 +203,7 @@ class _HomeScreenState extends State<HomeScreen> {
         curve: Curves.easeInOut,
         height: 56,
         decoration: BoxDecoration(
-          gradient: isActive 
+          gradient: isActive
               ? LinearGradient(
                   colors: [color, color.withOpacity(0.85)],
                   begin: Alignment.topLeft,
@@ -194,9 +212,19 @@ class _HomeScreenState extends State<HomeScreen> {
               : null,
           color: isActive ? null : Colors.white,
           borderRadius: BorderRadius.circular(20),
-          boxShadow: isActive 
-              ? [BoxShadow(color: color.withOpacity(0.4), blurRadius: 12, offset: const Offset(0, 4))]
-              : [BoxShadow(color: Colors.black.withOpacity(0.04), blurRadius: 8, offset: const Offset(0, 2))],
+          boxShadow: isActive
+              ? [
+                  BoxShadow(
+                      color: color.withOpacity(0.4),
+                      blurRadius: 12,
+                      offset: const Offset(0, 4))
+                ]
+              : [
+                  BoxShadow(
+                      color: Colors.black.withOpacity(0.04),
+                      blurRadius: 8,
+                      offset: const Offset(0, 2))
+                ],
           border: isActive ? null : Border.all(color: _grisClaro, width: 1.5),
         ),
         child: Row(
@@ -204,18 +232,23 @@ class _HomeScreenState extends State<HomeScreen> {
           children: [
             Icon(icon, size: 20, color: isActive ? Colors.white : _grisTexto),
             const SizedBox(width: 8),
-            Text(label, style: TextStyle(
-              fontSize: 15,
-              fontWeight: FontWeight.w700,
-              color: isActive ? Colors.white : _grisTexto,
-              letterSpacing: 0.3,
-            )),
+            Text(label,
+                style: TextStyle(
+                  fontSize: 15,
+                  fontWeight: FontWeight.w700,
+                  color: isActive ? Colors.white : _grisTexto,
+                  letterSpacing: 0.3,
+                )),
           ],
         ),
       ),
     );
   }
 }
+
+
+
+
 
 // ════════════════════════════════════════════════════════════
 //  Test Section
@@ -979,86 +1012,38 @@ class _TestInlineState extends State<_TestInline> {
 
 
 // ── Modelo de comida ─────────────────────────────────────────
-class Comida {
-  final String nombre;
-  final int calorias;
-  final IconData icono;
-
-  const Comida({
-    required this.nombre,
-    required this.calorias,
-    required this.icono,
-  });
-}
-
-// ── Modelo de sección de comida ──────────────────────────────
-class SeccionComida {
-  final String nombre;
-  final IconData icono;
-  final int metaCalorias;
-  final List<Comida> comidas;
-
-  SeccionComida({
-    required this.nombre,
-    required this.icono,
-    required this.metaCalorias,
-    List<Comida>? comidas,
-  }) : comidas = comidas ?? [];
-
-  int get totalCalorias => comidas.fold(0, (s, c) => s + c.calorias);
-
-  Color get colorEstado {
-    if (totalCalorias == 0) return const Color(0xFFBDBDBD);
-    final pct = totalCalorias / metaCalorias;
-    if (pct <= 1.0) return const Color(0xFF4CAF50);
-    if (pct <= 1.30) return const Color(0xFFE8943A);
-    return const Color(0xFFE53935);
-  }
-
-  String get etiquetaEstado {
-    if (totalCalorias == 0) return 'Sin registros';
-    final pct = totalCalorias / metaCalorias;
-    if (pct <= 0.7) return 'Pocas calorías';
-    if (pct <= 1.0) return 'Bien equilibrado';
-    if (pct <= 1.30) return 'Un poco alto';
-    return 'Muy alto';
-  }
-}
-
-// ── Tab de Registro de Comidas ───────────────────────────────
+// Comida y SeccionComida viven en app_state.dart — no se redefinen aquí.
+ 
+// ════════════════════════════════════════════════════════════
+//  Tab de Registro de Comidas
+// ════════════════════════════════════════════════════════════
+ 
+// ✅ CORRECCIÓN 3: _TabRegistro ahora recibe appState
 class _TabRegistro extends StatefulWidget {
-  const _TabRegistro();
-
+  final AppState appState;
+  const _TabRegistro({required this.appState});
+ 
   @override
   State<_TabRegistro> createState() => _TabRegistroState();
 }
-
+ 
 class _TabRegistroState extends State<_TabRegistro> {
   static const Color _naranja = Color(0xFFE8943A);
-
+ 
   final TextEditingController _nombreCtrl = TextEditingController();
   final TextEditingController _calCtrl = TextEditingController();
   bool _cargandoCalorias = false;
-
-  late final List<SeccionComida> _secciones;
-
-  @override
-  void initState() {
-    super.initState();
-    _secciones = [
-      SeccionComida(nombre: 'Desayuno',     icono: Icons.free_breakfast,  metaCalorias: 400),
-      SeccionComida(nombre: 'Media mañana', icono: Icons.coffee,          metaCalorias: 200),
-      SeccionComida(nombre: 'Almuerzo',     icono: Icons.lunch_dining,    metaCalorias: 700),
-      SeccionComida(nombre: 'Media tarde',  icono: Icons.apple,           metaCalorias: 200),
-      SeccionComida(nombre: 'Cena',         icono: Icons.dinner_dining,   metaCalorias: 500),
-    ];
-  }
-
+ 
+  // ✅ CORRECCIONES 1 y 2: se eliminó "late final List<SeccionComida> _secciones"
+  // y se eliminó el initState() que recreaba las secciones localmente.
+  // Las secciones viven únicamente en widget.appState.secciones.
+ 
+  // ✅ CORRECCIÓN 5: _totalDia lee de appState
   int get _totalDia =>
-      _secciones.fold(0, (s, sec) => s + sec.totalCalorias);
-
+      widget.appState.secciones.fold(0, (s, sec) => s + sec.totalCalorias);
+ 
   static const int _metaDia = 2000;
-
+ 
   ({String mensaje, Color color, IconData icono}) get _estadoDia {
     final total = _totalDia;
     if (total == 0) {
@@ -1103,7 +1088,7 @@ class _TabRegistroState extends State<_TabRegistro> {
       icono: Icons.sentiment_very_dissatisfied_outlined,
     );
   }
-
+ 
   static const Map<String, int> _tablaLocal = {
     'arepa': 160, 'arepa con huevo': 280, 'arepa con queso': 240,
     'pan': 80, 'pan integral': 70, 'tostada': 75, 'croissant': 230,
@@ -1140,7 +1125,7 @@ class _TabRegistroState extends State<_TabRegistro> {
     'brownie': 240, 'torta': 350, 'helado': 200,
     'obleas': 150, 'chocoramo': 320,
   };
-
+ 
   Future<void> _estimarCalorias(String nombre) async {
     if (nombre.trim().isEmpty) return;
     setState(() {
@@ -1165,8 +1150,8 @@ class _TabRegistroState extends State<_TabRegistro> {
         '&search_simple=1&action=process&json=1&page_size=5'
         '&fields=product_name,nutriments',
       );
-      final response = await http.get(uri, headers: {'User-Agent': 'CaloriasApp/1.0'})
-          .timeout(const Duration(seconds: 8));
+      final response = await http
+          .get(uri, headers: {'User-Agent': 'CaloriasApp/1.0'}).timeout(const Duration(seconds: 8));
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);
         final productos = data['products'] as List? ?? [];
@@ -1174,7 +1159,9 @@ class _TabRegistroState extends State<_TabRegistro> {
           final nutriments = prod['nutriments'];
           if (nutriments == null) continue;
           final kcal = (nutriments['energy-kcal_100g'] ??
-              nutriments['energy-kcal'] ?? 0).toDouble();
+                  nutriments['energy-kcal'] ??
+                  0)
+              .toDouble();
           if (kcal > 0) {
             final porcion = (kcal * 1.5).round();
             if (mounted) setState(() => _calCtrl.text = porcion.toString());
@@ -1202,24 +1189,29 @@ class _TabRegistroState extends State<_TabRegistro> {
       if (mounted) setState(() => _cargandoCalorias = false);
     }
   }
-
-  void _agregarComidaASeccion(SeccionComida seccion, {String? nombre, int? calorias, IconData? icono}) {
+ 
+  // ✅ CORRECCIÓN 6: usa widget.appState.agregarComida() en lugar de setState directo
+  void _agregarComidaASeccion(SeccionComida seccion,
+      {String? nombre, int? calorias, IconData? icono}) {
     final n = nombre ?? _nombreCtrl.text.trim();
     final c = calorias ?? int.tryParse(_calCtrl.text.trim());
     if (n.isEmpty || c == null || c <= 0) return;
-    setState(() {
-      seccion.comidas.add(Comida(nombre: n, calorias: c, icono: icono ?? Icons.restaurant));
-    });
+ 
+    widget.appState.agregarComida(
+      seccion,
+      Comida(nombre: n, calorias: c, icono: icono ?? Icons.restaurant),
+    );
+ 
     _nombreCtrl.clear();
     _calCtrl.clear();
   }
-
+ 
+  // ✅ CORRECCIÓN 7: usa widget.appState.eliminarComida() en lugar de setState directo
   void _eliminarComida(SeccionComida seccion, int index) {
     HapticFeedback.lightImpact();
-    setState(() => seccion.comidas.removeAt(index));
+    widget.appState.eliminarComida(seccion, index);
   }
-
-  // ── Ejemplos por sección para el banner informativo ──────────
+ 
   static const Map<String, String> _ejemplosPorSeccion = {
     'Desayuno': 'pan tostado, mantequilla, huevo revuelto, jugo de naranja',
     'Media mañana': 'manzana, almendras, yogurt',
@@ -1227,11 +1219,11 @@ class _TabRegistroState extends State<_TabRegistro> {
     'Media tarde': 'galletas, maní, agua',
     'Cena': 'sopa, pan, queso, leche',
   };
-
+ 
   void _mostrarFormularioSeccion(SeccionComida seccion) {
     _nombreCtrl.clear();
     _calCtrl.clear();
-
+ 
     final sugerenciasPorSeccion = {
       'Desayuno': [
         Comida(nombre: 'Arepa con huevo', calorias: 280, icono: Icons.egg_alt),
@@ -1264,10 +1256,10 @@ class _TabRegistroState extends State<_TabRegistro> {
         Comida(nombre: 'Ajiaco', calorias: 380, icono: Icons.dinner_dining),
       ],
     };
-
+ 
     final sugerencias = sugerenciasPorSeccion[seccion.nombre] ?? [];
     final ejemplo = _ejemplosPorSeccion[seccion.nombre] ?? 'arroz, pollo, ensalada';
-
+ 
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
@@ -1277,17 +1269,18 @@ class _TabRegistroState extends State<_TabRegistro> {
       ),
       builder: (ctx) => StatefulBuilder(
         builder: (ctx, setSheet) => Padding(
-          padding: EdgeInsets.fromLTRB(20, 16, 20, MediaQuery.of(ctx).viewInsets.bottom + 28),
+          padding: EdgeInsets.fromLTRB(
+              20, 16, 20, MediaQuery.of(ctx).viewInsets.bottom + 28),
           child: SingleChildScrollView(
             child: Column(
               mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-
                 // ── Handle ──────────────────────────────────
                 Center(
                   child: Container(
-                    width: 36, height: 4,
+                    width: 36,
+                    height: 4,
                     decoration: BoxDecoration(
                       color: Colors.grey.shade200,
                       borderRadius: BorderRadius.circular(99),
@@ -1295,12 +1288,13 @@ class _TabRegistroState extends State<_TabRegistro> {
                   ),
                 ),
                 const SizedBox(height: 20),
-
+ 
                 // ── Título ───────────────────────────────────
                 Row(
                   children: [
                     Container(
-                      width: 42, height: 42,
+                      width: 42,
+                      height: 42,
                       decoration: BoxDecoration(
                         color: _naranja.withOpacity(0.1),
                         borderRadius: BorderRadius.circular(13),
@@ -1321,14 +1315,15 @@ class _TabRegistroState extends State<_TabRegistro> {
                         ),
                         Text(
                           '${seccion.comidas.length} alimento${seccion.comidas.length != 1 ? 's' : ''} registrado${seccion.comidas.length != 1 ? 's' : ''}',
-                          style: TextStyle(fontSize: 12, color: Colors.grey.shade400),
+                          style:
+                              TextStyle(fontSize: 12, color: Colors.grey.shade400),
                         ),
                       ],
                     ),
                   ],
                 ),
                 const SizedBox(height: 20),
-
+ 
                 // ── Banner informativo ────────────────────────
                 Container(
                   width: double.infinity,
@@ -1358,7 +1353,8 @@ class _TabRegistroState extends State<_TabRegistro> {
                                 style: TextStyle(fontWeight: FontWeight.w700),
                               ),
                               TextSpan(
-                                text: 'Para mayor precisión, agrega cada ingrediente por separado. Por ejemplo, en lugar de "sándwich", registra ',
+                                text:
+                                    'Para mayor precisión, agrega cada ingrediente por separado. Por ejemplo, en lugar de "sándwich", registra ',
                               ),
                               TextSpan(
                                 text: 'pan, jamón y queso',
@@ -1373,7 +1369,7 @@ class _TabRegistroState extends State<_TabRegistro> {
                   ),
                 ),
                 const SizedBox(height: 8),
-
+ 
                 // ── Ejemplo de la sección ─────────────────────
                 Padding(
                   padding: const EdgeInsets.only(left: 2),
@@ -1387,12 +1383,13 @@ class _TabRegistroState extends State<_TabRegistro> {
                   ),
                 ),
                 const SizedBox(height: 20),
-
+ 
                 // ── Acceso rápido ────────────────────────────
                 Row(
                   children: [
                     Container(
-                      width: 3, height: 14,
+                      width: 3,
+                      height: 14,
                       decoration: BoxDecoration(
                         color: _naranja,
                         borderRadius: BorderRadius.circular(99),
@@ -1413,43 +1410,50 @@ class _TabRegistroState extends State<_TabRegistro> {
                 Wrap(
                   spacing: 8,
                   runSpacing: 8,
-                  children: sugerencias.map((s) => GestureDetector(
-                    onTap: () {
-                      Navigator.pop(ctx);
-                      _agregarComidaASeccion(seccion, nombre: s.nombre, calorias: s.calorias, icono: s.icono);
-                    },
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 9),
-                      decoration: BoxDecoration(
-                        color: Colors.white,
-                        borderRadius: BorderRadius.circular(12),
-                        border: Border.all(color: Colors.grey.shade200),
-                      ),
-                      child: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Icon(s.icono, size: 14, color: _naranja),
-                          const SizedBox(width: 6),
-                          Text(
-                            s.nombre,
-                            style: const TextStyle(
-                              fontSize: 13,
-                              color: Color(0xFF2D2D2D),
-                              fontWeight: FontWeight.w500,
+                  children: sugerencias
+                      .map((s) => GestureDetector(
+                            onTap: () {
+                              Navigator.pop(ctx);
+                              _agregarComidaASeccion(seccion,
+                                  nombre: s.nombre,
+                                  calorias: s.calorias,
+                                  icono: s.icono);
+                            },
+                            child: Container(
+                              padding: const EdgeInsets.symmetric(
+                                  horizontal: 12, vertical: 9),
+                              decoration: BoxDecoration(
+                                color: Colors.white,
+                                borderRadius: BorderRadius.circular(12),
+                                border: Border.all(color: Colors.grey.shade200),
+                              ),
+                              child: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Icon(s.icono, size: 14, color: _naranja),
+                                  const SizedBox(width: 6),
+                                  Text(
+                                    s.nombre,
+                                    style: const TextStyle(
+                                      fontSize: 13,
+                                      color: Color(0xFF2D2D2D),
+                                      fontWeight: FontWeight.w500,
+                                    ),
+                                  ),
+                                ],
+                              ),
                             ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  )).toList(),
+                          ))
+                      .toList(),
                 ),
                 const SizedBox(height: 24),
-
+ 
                 // ── Separador sección personalizada ───────────
                 Row(
                   children: [
                     Container(
-                      width: 3, height: 14,
+                      width: 3,
+                      height: 14,
                       decoration: BoxDecoration(
                         color: _naranja,
                         borderRadius: BorderRadius.circular(99),
@@ -1467,7 +1471,7 @@ class _TabRegistroState extends State<_TabRegistro> {
                   ],
                 ),
                 const SizedBox(height: 12),
-
+ 
                 // ── Campo nombre + buscar ────────────────────
                 Row(
                   children: [
@@ -1495,7 +1499,8 @@ class _TabRegistroState extends State<_TabRegistro> {
                           ),
                           enabledBorder: OutlineInputBorder(
                             borderRadius: BorderRadius.circular(14),
-                            borderSide: BorderSide(color: Colors.grey.shade100),
+                            borderSide:
+                                BorderSide(color: Colors.grey.shade100),
                           ),
                           focusedBorder: OutlineInputBorder(
                             borderRadius: BorderRadius.circular(14),
@@ -1537,7 +1542,7 @@ class _TabRegistroState extends State<_TabRegistro> {
                   ],
                 ),
                 const SizedBox(height: 10),
-
+ 
                 // ── Campo calorías ───────────────────────────
                 StatefulBuilder(
                   builder: (_, setField) {
@@ -1590,7 +1595,7 @@ class _TabRegistroState extends State<_TabRegistro> {
                   },
                 ),
                 const SizedBox(height: 20),
-
+ 
                 // ── Botón agregar ────────────────────────────
                 SizedBox(
                   width: double.infinity,
@@ -1630,18 +1635,18 @@ class _TabRegistroState extends State<_TabRegistro> {
       ),
     );
   }
-
+ 
   @override
   void dispose() {
     _nombreCtrl.dispose();
     _calCtrl.dispose();
     super.dispose();
   }
-
+ 
   @override
   Widget build(BuildContext context) {
     final estado = _estadoDia;
-
+ 
     return Scaffold(
       backgroundColor: Colors.transparent,
       body: SingleChildScrollView(
@@ -1660,7 +1665,7 @@ class _TabRegistroState extends State<_TabRegistro> {
               style: TextStyle(fontSize: 13, color: Colors.grey.shade500),
             ),
             const SizedBox(height: 20),
-
+ 
             // ── Tarjeta mensaje del día ──────────────────────
             AnimatedContainer(
               duration: const Duration(milliseconds: 400),
@@ -1673,7 +1678,8 @@ class _TabRegistroState extends State<_TabRegistro> {
               child: Row(
                 children: [
                   Container(
-                    width: 50, height: 50,
+                    width: 50,
+                    height: 50,
                     decoration: BoxDecoration(
                       color: estado.color.withOpacity(0.12),
                       borderRadius: BorderRadius.circular(15),
@@ -1685,7 +1691,6 @@ class _TabRegistroState extends State<_TabRegistro> {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        // ── Solo barra de progreso del día (sin número) ──
                         ClipRRect(
                           borderRadius: BorderRadius.circular(99),
                           child: LinearProgressIndicator(
@@ -1711,9 +1716,9 @@ class _TabRegistroState extends State<_TabRegistro> {
               ),
             ),
             const SizedBox(height: 24),
-
-            // ── Secciones de comida ──────────────────────────
-            ..._secciones.map((sec) => _SeccionCard(
+ 
+            // ✅ CORRECCIÓN 4: usa widget.appState.secciones en lugar de _secciones
+            ...widget.appState.secciones.map((sec) => _SeccionCard(
                   seccion: sec,
                   onAgregar: () => _mostrarFormularioSeccion(sec),
                   onEliminar: (i) => _eliminarComida(sec, i),
@@ -1724,29 +1729,31 @@ class _TabRegistroState extends State<_TabRegistro> {
     );
   }
 }
-
-// ── Tarjeta de sección expandible ────────────────────────────
+ 
+// ════════════════════════════════════════════════════════════
+//  Tarjeta de sección expandible
+// ════════════════════════════════════════════════════════════
 class _SeccionCard extends StatefulWidget {
   final SeccionComida seccion;
   final VoidCallback onAgregar;
   final void Function(int) onEliminar;
-
+ 
   const _SeccionCard({
     required this.seccion,
     required this.onAgregar,
     required this.onEliminar,
   });
-
+ 
   @override
   State<_SeccionCard> createState() => _SeccionCardState();
 }
-
+ 
 class _SeccionCardState extends State<_SeccionCard>
     with SingleTickerProviderStateMixin {
   bool _expandido = false;
   late AnimationController _animCtrl;
   late Animation<double> _rotacion;
-
+ 
   @override
   void initState() {
     super.initState();
@@ -1755,25 +1762,25 @@ class _SeccionCardState extends State<_SeccionCard>
     _rotacion = Tween<double>(begin: 0, end: 0.5).animate(
         CurvedAnimation(parent: _animCtrl, curve: Curves.easeInOut));
   }
-
+ 
   @override
   void dispose() {
     _animCtrl.dispose();
     super.dispose();
   }
-
+ 
   void _toggle() {
     setState(() => _expandido = !_expandido);
     _expandido ? _animCtrl.forward() : _animCtrl.reverse();
   }
-
+ 
   @override
   Widget build(BuildContext context) {
     final sec = widget.seccion;
     final color = sec.colorEstado;
     final isEmpty = sec.comidas.isEmpty;
     final progreso = (sec.totalCalorias / sec.metaCalorias).clamp(0.0, 1.0);
-
+ 
     return Container(
       margin: const EdgeInsets.only(bottom: 10),
       decoration: BoxDecoration(
@@ -1801,7 +1808,6 @@ class _SeccionCardState extends State<_SeccionCard>
               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
               child: Row(
                 children: [
-                  // Icono
                   AnimatedContainer(
                     duration: const Duration(milliseconds: 300),
                     width: 44,
@@ -1813,8 +1819,6 @@ class _SeccionCardState extends State<_SeccionCard>
                     child: Icon(sec.icono, size: 20, color: color),
                   ),
                   const SizedBox(width: 12),
-
-                  // Nombre + barra + etiqueta
                   Expanded(
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
@@ -1828,7 +1832,6 @@ class _SeccionCardState extends State<_SeccionCard>
                           ),
                         ),
                         const SizedBox(height: 6),
-                        // ── Barra de progreso sin número ──────
                         ClipRRect(
                           borderRadius: BorderRadius.circular(99),
                           child: LinearProgressIndicator(
@@ -1871,8 +1874,6 @@ class _SeccionCardState extends State<_SeccionCard>
                     ),
                   ),
                   const SizedBox(width: 10),
-
-                  // Flecha
                   RotationTransition(
                     turns: _rotacion,
                     child: Icon(Icons.keyboard_arrow_down_rounded,
@@ -1882,17 +1883,14 @@ class _SeccionCardState extends State<_SeccionCard>
               ),
             ),
           ),
-
+ 
           // ── Contenido expandible ───────────────────────────
           AnimatedCrossFade(
             firstChild: const SizedBox(width: double.infinity),
             secondChild: Column(
               children: [
-                // Separador fino
                 Divider(height: 1, color: Colors.grey.shade100),
                 const SizedBox(height: 12),
-
-                // Lista de comidas
                 if (sec.comidas.isNotEmpty)
                   ...List.generate(sec.comidas.length, (i) {
                     final c = sec.comidas[i];
@@ -1927,8 +1925,6 @@ class _SeccionCardState extends State<_SeccionCard>
                     ),
                   ),
                 const SizedBox(height: 8),
-
-                // Botón agregar
                 Padding(
                   padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
                   child: SizedBox(
@@ -1964,21 +1960,23 @@ class _SeccionCardState extends State<_SeccionCard>
     );
   }
 }
-
-// ── Item de comida ───────────────────────────────────────────
+ 
+// ════════════════════════════════════════════════════════════
+//  Item de comida
+// ════════════════════════════════════════════════════════════
 class _ComidaItem extends StatelessWidget {
   final Comida comida;
   final bool isLast;
   final VoidCallback onEliminar;
   final Color colorAccent;
-
+ 
   const _ComidaItem({
     required this.comida,
     required this.isLast,
     required this.onEliminar,
     required this.colorAccent,
   });
-
+ 
   @override
   Widget build(BuildContext context) {
     return Dismissible(
@@ -2025,7 +2023,6 @@ class _ComidaItem extends StatelessWidget {
                 ),
               ),
             ),
-            // ── Solo barra de porción, sin número ──────────
             SizedBox(
               width: 60,
               child: ClipRRect(
@@ -2049,11 +2046,13 @@ class _ComidaItem extends StatelessWidget {
                         borderRadius: BorderRadius.circular(20)),
                     title: const Text(
                       'Eliminar alimento',
-                      style: TextStyle(fontSize: 17, fontWeight: FontWeight.w700),
+                      style:
+                          TextStyle(fontSize: 17, fontWeight: FontWeight.w700),
                     ),
                     content: Text(
                       '¿Quieres eliminar "${comida.nombre}"?',
-                      style: TextStyle(fontSize: 14, color: Colors.grey.shade600),
+                      style:
+                          TextStyle(fontSize: 14, color: Colors.grey.shade600),
                     ),
                     actions: [
                       TextButton(
@@ -2068,7 +2067,8 @@ class _ComidaItem extends StatelessWidget {
                         },
                         child: const Text('Eliminar',
                             style: TextStyle(
-                                color: Colors.red, fontWeight: FontWeight.w600)),
+                                color: Colors.red,
+                                fontWeight: FontWeight.w600)),
                       ),
                     ],
                   ),
@@ -2092,33 +2092,43 @@ class _ComidaItem extends StatelessWidget {
     );
   }
 }
-
-// ── RingPainter ───────────────────────────────────────────────
+ 
+// ════════════════════════════════════════════════════════════
+//  RingPainter
+// ════════════════════════════════════════════════════════════
 class _RingPainter extends CustomPainter {
   final double progress;
   final Color color;
   final double strokeWidth;
-
+ 
   const _RingPainter({
     required this.progress,
     required this.color,
     this.strokeWidth = 7,
   });
-
+ 
   @override
   void paint(Canvas canvas, Size size) {
     final cx = size.width / 2;
     final cy = size.height / 2;
     final radius = size.width / 2 - strokeWidth;
     final rect = Rect.fromCircle(center: Offset(cx, cy), radius: radius);
-    canvas.drawArc(rect, -1.5708, 6.2832, false,
+    canvas.drawArc(
+        rect,
+        -1.5708,
+        6.2832,
+        false,
         Paint()
           ..color = color.withOpacity(0.15)
           ..style = PaintingStyle.stroke
           ..strokeWidth = strokeWidth
           ..strokeCap = StrokeCap.round);
     if (progress > 0) {
-      canvas.drawArc(rect, -1.5708, 6.2832 * progress, false,
+      canvas.drawArc(
+          rect,
+          -1.5708,
+          6.2832 * progress,
+          false,
           Paint()
             ..color = color
             ..style = PaintingStyle.stroke
@@ -2126,11 +2136,12 @@ class _RingPainter extends CustomPainter {
             ..strokeCap = StrokeCap.round);
     }
   }
-
+ 
   @override
   bool shouldRepaint(_RingPainter old) =>
       old.progress != progress || old.color != color;
 }
+ 
 
 
 

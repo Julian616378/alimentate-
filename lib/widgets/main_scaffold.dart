@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'tip_flotante.dart';
 import '../state/app_state.dart';
 import '../screens/home_screen.dart';
 import '../screens/progreso_screen.dart';
@@ -27,13 +28,19 @@ class _MainScaffoldState extends State<MainScaffold> {
     ];
 
     return Scaffold(
-      body: AnimatedSwitcher(
+  body: Stack(
+    children: [
+      AnimatedSwitcher(
         duration: const Duration(milliseconds: 250),
         child: KeyedSubtree(
           key: ValueKey(_currentIndex),
           child: pages[_currentIndex],
         ),
       ),
+
+      const TipFlotante(),
+    ],
+  ),
       bottomNavigationBar: Container(
         decoration: BoxDecoration(
           color: Colors.white,

@@ -125,15 +125,39 @@ class AppState extends ChangeNotifier {
   }
 
   // ── SECCIONES DE COMIDA ─────────────────────────────────
-  final List<SeccionComida> _secciones = [
-    SeccionComida(nombre: 'Desayuno', icono: Icons.free_breakfast, metaCalorias: 400),
-    SeccionComida(nombre: 'Media mañana', icono: Icons.coffee, metaCalorias: 200),
-    SeccionComida(nombre: 'Almuerzo', icono: Icons.lunch_dining, metaCalorias: 700),
-    SeccionComida(nombre: 'Media tarde', icono: Icons.apple, metaCalorias: 200),
-    SeccionComida(nombre: 'Cena', icono: Icons.dinner_dining, metaCalorias: 500),
-  ];
+// ── SECCIONES DE COMIDA ─────────────────────────────────
+final List<SeccionComida> _secciones = [
+  SeccionComida(
+    nombre: 'Desayuno',
+    icono: Icons.free_breakfast,
+    metaCalorias: 400,
+  ),
+  SeccionComida(
+    nombre: 'Media mañana',
+    icono: Icons.coffee,
+    metaCalorias: 200,
+  ),
+  SeccionComida(
+    nombre: 'Almuerzo',
+    icono: Icons.lunch_dining,
+    metaCalorias: 700,
+  ),
+  SeccionComida(
+    nombre: 'Media tarde',
+    icono: Icons.apple,
+    metaCalorias: 200,
+  ),
+  SeccionComida(
+    nombre: 'Cena',
+    icono: Icons.dinner_dining,
+    metaCalorias: 500,
+  ),
+];
 
-  List<SeccionComida> get secciones => _secciones;
+List<SeccionComida> get secciones => _secciones;
+
+int get seccionesCompletadas =>
+    _secciones.where((s) => s.comidas.isNotEmpty).length;
 
   static const int metaDiaria = 2000;
 
